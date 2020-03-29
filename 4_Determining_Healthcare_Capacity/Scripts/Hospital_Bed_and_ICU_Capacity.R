@@ -5,6 +5,15 @@ conflict_prefer("select", "dplyr")
 conflict_prefer("filter", "dplyr")
 conflict_prefer("area", "patchwork")
 
+# Load In Data Used Across Multiple Analyses
+world_bank_dd <- read.csv("Data/World_Bank_Country_Metadata.csv", 
+                          stringsAsFactors = FALSE, header = TRUE, 
+                          fileEncoding = 'UTF-8-BOM') %>%
+  select(country_code, region, income_group)
+countries <- world_bank_dd$country_code[world_bank_dd$income_group %in% 
+                                          c("Low income", "Lower middle income", 
+                                            "Upper middle income","High income")]
+
 # Set Working Directory to Specific Folder
 setwd("4_Determining_Healthcare_Capacity/")
 
@@ -15,17 +24,6 @@ source("Scripts/World_Bank_Data_Loading.R")
 # Set Seed and Toggle Whether Fresh Run Required
 set.seed(1020191)
 fresh_run <- FALSE
-
-# Loading Required Data
-
-# Load In World Bank Data Dictionary and Filter for Countries
-world_bank_dd <- read.csv("Data/World_Bank_Country_Metadata.csv", 
-                                       stringsAsFactors = FALSE, header = TRUE, 
-                                       fileEncoding = 'UTF-8-BOM') %>%
-  select(country_code, region, income_group)
-countries <- world_bank_dd$country_code[world_bank_dd$income_group %in% 
-                                          c("Low income", "Lower middle income", 
-                                            "Upper middle income","High income")]
 
 # Load In World Bank Hospital Beds Data and Changing Column Names 
 raw_hospital_beds <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Hospital_Beds.csv", 

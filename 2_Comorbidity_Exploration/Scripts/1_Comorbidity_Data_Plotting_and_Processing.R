@@ -2,6 +2,15 @@
 library(tidyverse); library(lattice); library(viridisLite); library(RColorBrewer); 
 library(patchwork); library(cowplot);
 
+# Loading In Data Used Across Multiple Analysis Strands
+world_bank_metadata <- read.csv("Data/World_Bank_Country_Metadata.csv", fileEncoding = 'UTF-8-BOM') %>%
+  select(TableName, income_group)
+world_bank_countries <- world_bank_metadata %>%
+  filter(income_group != "") %>%
+  select(TableName)
+world_bank_countries <- as.character(unlist(world_bank_countries))
+world_bank_countries <- world_bank_countries[order(world_bank_countries)]
+
 # Set Working Data
 setwd("2_Comorbidity_Exploration/")
 
@@ -16,18 +25,9 @@ age_levels_final <- c("0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34",
                     "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+")
 income_groups <- c("Low income", "Lower middle income", "Upper middle income", "High income")
 
-# Sorting Out Naming of Countries
-#   The datasets have different naming conventions for countries - use World Bank as the
-#   standard here 
-world_bank_metadata <- read.csv("Data/World_Bank_Country_Metadata.csv", fileEncoding = 'UTF-8-BOM') %>%
-  select(TableName, income_group)
-world_bank_countries <- world_bank_metadata %>%
-  filter(income_group != "") %>%
-  select(TableName)
-world_bank_countries <- as.character(unlist(world_bank_countries))
-world_bank_countries <- world_bank_countries[order(world_bank_countries)]
-
 # Replacing and Checking Problem Spelling in Comorbidity Data
+#   The datasets have different naming conventions for countries - use World Bank as the
+#   standard here.
 comorbidity_data <- read.csv("Data/IHME_GBD_Comorbidity_Data.csv", stringsAsFactors = FALSE)
 comorbidity_countries <- comorbidity_data %>%
   select(location_name) 
