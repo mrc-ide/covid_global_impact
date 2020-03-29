@@ -1,0 +1,91 @@
+Reference,Country,Country_Code,Hospital_Beds,ICU_Beds,ICU_Per_100_Hospital_Beds,ICU_Beds_Per_100000
+Murthy_2015,Cambodia,KHM,32,8,25,
+Murthy_2015,Cambodia,KHM,50,4,8,
+Murthy_2015,Comoros Islands,COM,,10,,
+Murthy_2015,Democratic Republic of Congo,COD,,,,
+Murthy_2015,Democratic Republic of Congo,COD,,3,,
+Murthy_2015,Eritrea,ERI,300,9,3,
+Murthy_2015,Ethiopia,ETH,,18,,
+Murthy_2015,Ethiopia,ETH,,,,
+Murthy_2015,Ethiopia,ETH,,6,,
+Murthy_2015,Ethiopia,ETH,450,6,1.333333333,
+Murthy_2015,Kenya,KEN,60,,,
+Murthy_2015,Kenya,KEN,1800,20,1.111111111,
+Murthy_2015,Kenya,KEN,140,5,3.571428571,
+Murthy_2015,Kenya,KEN,750,5,0.666666667,
+Murthy_2015,Malawi,MWI,,5,,
+Murthy_2015,Malawi,MWI,600,4,0.666666667,
+Murthy_2015,Mali,MLI,,,,
+Murthy_2015,Nepal,NPL,,6,,
+Murthy_2015,Nepal,NPL,340,5,1.470588235,
+Murthy_2015,Nepal,NPL,,6,,
+Shrestha_2011,Nepal,NPL,7040,331,4.701704545,
+Murthy_2015,Nepal,NPL,,22,,
+Murthy_2015,Nepal,NPL,,11,,
+Murthy_2015,Nepal,NPL,,,,
+Murthy_2015,Niger,NER,,10,,
+Murthy_2015,Tanzania,TZA,,10,,
+Murthy_2015,Tanzania,TZA,,10,,
+Murthy_2015,Tanzania,TZA,,8,,
+Murthy_2015,Tanzania,TZA,,22,,
+Murthy_2015,Togo,TGO,,,,
+Murthy_2015,Uganda,UGA,,8,,
+Murthy_2015,Uganda,UGA,,22,,
+Murthy_2015,Uganda,UGA,,1,,
+Murthy_2015,Uganda,UGA,,8,,
+Murthy_2015,Zambia,ZMB,1300,5,0.384615385,
+Murthy_2015,Zimbabwe,ZWE,,5,,
+Adhikari_2010,Colombia,COL,,,3.5,
+Adhikari_2010,Trinidad and Tobago,TTO,,,,
+Adhikari_2010,South Africa (Public),ZAF,,,1.7,
+Adhikari_2010,South Africa (Private),ZAF,,,8.9,
+Adhikari_2010,Zambia,ZMB,,,0.2,
+Adhikari_2010,China,CHN,,,1.8,
+Adhikari_2010,Sri Lanka,LKA,,,,
+MORU,Sri Lanka,LKA,,,,
+MORU,Bangladesh,BGD,,,,
+MORU,China,CHN,,,,
+Indonesia MoH,Indonesia,IDN,,,,
+Atumanya_2020,Uganda,UGA,3633,55,1.513900358,
+Losonczy_2019,Haiti,HTI,4300,124,2.88372093,
+Sultan_2018,Ethiopia,ETH,1400,30,2.142857143,
+Lalani_2018,Kenya,KEN,838,6,0.715990453,
+Touray_2018,Gambia,GMB,3236.363636,8,0.247191011,
+Zha_2018,Nigeria,NGA,500,5.5,1.1,
+Dat_2017,Vietnam,VNM,162,13,8.024691358,
+Brouillete_2017,Ghana,GHA,1200,6,0.5,
+Mendsaikhan_2016,Mongolia,MNG,20529.41176,349,1.7,
+Henry_2015,Malawi,MWI,5753,0,0,
+Louriz_2012,Morocco,MAR,1028,12,1.167315175,
+Lin_2011,Afghanistan,AFG,400,10,2.5,
+Celis_2002,Colombia,COL,12987,460,3.542003542,
+Haniffa_2014,Sri Lanka,LKA,,99,1.3,
+Kwizera_2012,Uganda,UGA,1500,12,0.8,
+Muhanuzi,Tanzania,TZA,1500,13,0.866666667,
+Abdissa_2018,Ethiopia,ETH,364,6,1.648351648,
+Duarte_2017,Brazil,BRA,190,14,7.368421053,
+Ttendo_2016,Uganda,UGA,300,2,0.666666667,
+Khan_2016,Pakistan,PAK,570,14,2.456140351,
+Phua_2020,Bangladesh,BGD,,878,2.692333901,0.52350937
+Phua_2021,India ,IND,,29997,3.7,2.3
+Phua_2022,Indonesia,IDN,,7094,2.3,2.7
+Phua_2022,Lao,LAO,,152,,2.1
+Phua_2024,Mongolia,MNG,,271,2.5,8.8
+Phua_2025,Myanmar,MMR,,331,0.564846416,0.621331058
+Phua_2025,Nepal,NPL,,578,,2.8
+Phua_2027,Pakistan,PAK,,3142,2.5,1.5
+Phua_2028,Phillipines,PHL,,2315,3.668308351,2.181156317
+Phua_2029,Sri Lanka,LKA,,519,0.6,2.3
+Phua_2030,China,CHN,,49453,0.9,3.6
+Phua_2031,Iran,IRN,,3769,2.883931398,4.574511873
+Phua_2032,Kazakhstan,KAZ,,3948,3.9,21.3
+Phua_2033,Malaysia,MYS,,1060,1.7,3.4
+Phua_2034,Thailand,THA,,7100,5.1,10.4
+Phua_2035,Brunei,BRN,,58,4.7,13.1
+Phua_2036,Hong Kong,HKG,,287,1.516438356,3.987671233
+Phua_2037,Japan,JPN,,5973,0.840266205,4.71841792
+Phua_2038,Oman ,OMN,,196,3.417234469,5.734669339
+Phua_2039,Saudi Arabia,SAU,,6515,9.2,22.8
+Phua_2040,Singapore,SGP,,335,3.295081967,5.691505216
+Phua_2041,South Korea,KOR,,5402,2,10.6
+Phua_2042,Taiwan,TWN,,5758,7.81940009,24.48932995
