@@ -5,21 +5,19 @@ library(zoo); library(readxl)
 # Loading In Data Used In Multiple Analyses
 pop_WPP <- read.csv("Data/WPP_demog_matrix.csv") # WPP Population
 contact_matrices <- readRDS("Data/contact_matrices.rds")
+severe_parameters <- read.csv("Data/severe_parameters.csv", stringsAsFactors = FALSE)
 beds_per_capita_df <- readRDS("4_Determining_Healthcare_Capacity/Outputs/Income_Strata_Predicted_Hospital_and_ICU_Beds.Rds") # Hospital Beds Per 1000 Population
 
 # Set Working Directory 
 setwd("5_Dynamical_Modelling_Healthcare_Demand/")
-
-# Loading in Data and Sourcing Required Functions 
-severe_parameters <- read.csv("Data/severe_parameters.csv", stringsAsFactors = FALSE)
-
-#### NEEDS TO CHANGE AND DYNAMICALLY LOAD IN DEPENDING ON WHICH R0 IS PICKED
-mitigation_raw <- read.csv("Data/mitigation_strategies_3.csv") # note this should be an output from 3. and then loaded in above
-#### NEEDS TO CHANGE AND DYNAMICALLY LOAD IN DEPENDING ON WHICH R0 IS PICKED
 source("Functions/Dynamical_Modelling_Functions.R")
 
-# Choose Specific Country to Run Analyses For 
+# Loading in Data and Sourcing Required Functions 
 R0_req <- 3 # R0 (paper uses 2.7, 3 and 3.5 - corresponds to 4, 3.5 and 3 day doubling times)
+mitigation_raw <- read.csv("Data/mitigation_strategies.csv") %>%
+  filter(R0 == R0_req)
+
+# Choose Specific Country to Run Analyses For 
 country_indicator <- 1
 countries <- c("Madagascar", "Nicaragua", "Grenada", "Malta")
 raw_country_pop <- unlist(pop_WPP[which(pop_WPP$`Region..subregion..country.or.area..` == countries[i]), 13:33])
@@ -264,7 +262,7 @@ x <- data.frame(country = rep(country_indicator, 18 * time_period),
                 time = seq(1, time_period), 
                 x)
 colnames(x) <- c("country", "R0", "output_type", "time", "unmitigated", paste0("supp_", suppress_triggers, "_time"))
-write.csv(x, file = paste0("Outputs/Raw_Data/Suppression_Country_", country_indicator, "_R0_", R0_req, "_Model_Outputs.csv"))
+write.csv(x, file = paste0("Outputs/Raw_Rep_Country_Outputs/Suppression_Country_", country_indicator, "_R0_", R0_req, "_Model_Outputs.csv"))
 
 # Plotting the Suppression Output 
 strats <- c("None", paste0("Supp_", suppress_triggers))
@@ -455,7 +453,6 @@ no_mitigation <- data.frame(country = rep(country_indicator, time_period),
                              no_mitigation_hosp_occ_lower_output, no_mitigation_hosp_occ_median_output, no_mitigation_hosp_occ_upper_output,
                              no_mitigation_ICU_occ_lower_output, no_mitigation_ICU_occ_median_output, no_mitigation_ICU_occ_upper_output))
 colnames(no_mitigation) <- c("country", "R0", "strategy", "time", outputs)
-                       
 
 # Generating the Output for Standard Mitigation
 std_mitigation_infections <-  matrix(ncol = replicates, nrow = time_period)
@@ -635,7 +632,7 @@ plus_mitigation <- data.frame(country = rep(country_indicator, time_period),
 colnames(plus_mitigation) <- c("country", "R0", "strategy", "time", outputs)
 
 x <- rbind(no_mitigation, std_mitigation, plus_mitigation)
-write.csv(x, file =  paste0("Outputs/Raw_Data/Mitigation_Country_", country_indicator, "_R0_", R0_req, "_Model_Outputs.csv"))
+write.csv(x, file =  paste0("Outputs/Raw_Rep_Country_Outputs/Mitigation_Country_", country_indicator, "_R0_", R0_req, "_Model_Outputs.csv"))
 
 # Plotting the Output for Hospitalisations
 colours <- c("#191308", "#454B66", "#9CA3DB")  # c("#a4243b", "#bd632f", "#d8973c")

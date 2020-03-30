@@ -1,18 +1,24 @@
 # Load Required Packages
-library(tidyverse); library(socialmixr); library(extraDistr); library(tictoc); library(zoo);
-source("Functions/Functions.R")
+library(tidyverse); library(socialmixr); library(extraDistr); library(tictoc); 
+library(zoo); library(readxl)
 
-# Loading In Relevant Data
-pop_WPP <- read.csv("Data/WPP_demog_matrix.csv")
-severe_parameters <- read.csv("Data/severe_parameters.csv", stringsAsFactors = FALSE)
+# Loading In Data Used In Multiple Analyses
+pop_WPP <- read.csv("Data/WPP_demog_matrix.csv") # WPP Population
 contact_matrices <- readRDS("Data/contact_matrices.rds")
+severe_parameters <- read.csv("Data/severe_parameters.csv", stringsAsFactors = FALSE)
+beds_per_capita_df <- readRDS("4_Determining_Healthcare_Capacity/Outputs/Income_Strata_Predicted_Hospital_and_ICU_Beds.Rds") # Hospital Beds Per 1000 Population
+
+# Set Working Directory 
+setwd("5_Dynamical_Modelling_Healthcare_Demand/")
+
+# Sourcing Functions
+source("Functions/Dynamical_Modelling_Functions.R")
 
 # Loading Model and Initialising Required Data/Parameters
 time_period <- 125 # time period to run over
 dt <- 0.1 # timestep
 dur_E <- 4.58 # mean duration of incubation period
 dur_I <- 2.09 # mean duration of infectious period
-R0_req <- 3 # R0 
 number_betas <- 2 # number of beta values (model is flexible and can change beta over time)
 tt_beta <- c(0, 200) # timepoints to implement different betas at
 tt_matrix <- c(0, 100, 250) # timepoints to implement the different matrices at 
@@ -28,6 +34,7 @@ suppress_reduction <- 0.25
 countries <- length(pop_WPP$Index)
 
 # Running for All Countries and Storing the Output
+R0_req <- 2.7 # R0 
 country_suppression_output <- matrix(nrow = countries, ncol = 18)
 for(i in 1:countries){
   
@@ -127,7 +134,7 @@ for(i in 1:countries){
   for (k in 1:length(mean_trigger_time)) {
     
     # Number of model replicates to run 
-    replicates <- 3
+    replicates <- 5
     
     # Generating Storage Vectors and Matrices
     temp_incidence_storage <- vector(mode = "numeric", length = replicates) 
@@ -203,68 +210,4 @@ colnames(country_suppression_output) <- c("Country",
                                          "Unmit_Max_Hosp_Abs", "Supp_0.2_Max_Hosp_Abs", "Supp_1.6_Max_Hosp_Abs",
                                          "Unmit_Total_ICU_Abs", "Supp_0.2_Total_ICU_Abs", "Supp_1.6_Total_ICU_Abs",
                                          "Unmit_Max_ICU_Abs", "Supp_0.2_Max_ICU_Abs", "Supp_1.6_Max_ICU_Abs")
-saveRDS(country_suppression_output, file = "Outputs/All_Countries_Suppression/All_Countries_Suppression_Output_R0_3.Rds")
-
-country_suppression_output <- readRDS(file = "Outputs/All_Countries_Suppression/All_Countries_Suppression_Output_R0_3.Rds")
-
-abs_numbers_0.2 <- country_suppression_output %>%
-  select(Country, Supp_0.2_Inc_Abs, Supp_0.2_Death_Abs, Supp_0.2_Total_Hosp_Abs, Supp_0.2_Max_Hosp_Abs, Supp_0.2_Total_ICU_Abs, Supp_0.2_Max_ICU_Abs) %>%
-  mutate(Supp_0.2_Inc_Abs = round(Supp_0.2_Inc_Abs),
-         Supp_0.2_Death_Abs = round(Supp_0.2_Death_Abs),
-         Supp_0.2_Total_Hosp_Abs = round(Supp_0.2_Total_Hosp_Abs),
-         Supp_0.2_Max_Hosp_Abs = round(Supp_0.2_Max_Hosp_Abs),
-         Supp_0.2_Total_ICU_Abs = round(Supp_0.2_Total_ICU_Abs),
-         Supp_0.2_Max_ICU_Abs = round(Supp_0.2_Max_ICU_Abs))
-write.csv(abs_numbers_0.2, file = "Outputs/All_Countries_Suppression/Absolute_Numbers_02.csv")
-
-abs_numbers_1.6 <- country_suppression_output %>%
-  select(Country, Supp_1.6_Inc_Abs, Supp_1.6_Death_Abs, Supp_1.6_Total_Hosp_Abs, Supp_1.6_Max_Hosp_Abs, Supp_1.6_Total_ICU_Abs, Supp_1.6_Max_ICU_Abs) %>%
-  mutate(Supp_1.6_Inc_Abs = round(Supp_1.6_Inc_Abs),
-         Supp_1.6_Death_Abs = round(Supp_1.6_Death_Abs),
-         Supp_1.6_Total_Hosp_Abs = round(Supp_1.6_Total_Hosp_Abs),
-         Supp_1.6_Max_Hosp_Abs = round(Supp_1.6_Max_Hosp_Abs),
-         Supp_1.6_Total_ICU_Abs = round(Supp_1.6_Total_ICU_Abs),
-         Supp_1.6_Max_ICU_Abs = round(Supp_1.6_Max_ICU_Abs))
-write.csv(abs_numbers_1.6, file = "Outputs/All_Countries_Suppression/Absolute_Numbers_16.csv")
-
-abs_numbers_unmitigated <- country_suppression_output %>%
-  select(Country, Unmit_Inc_Abs, Unmit_Death_Abs, Unmit_Total_Hosp_Abs, Unmit_Max_Hosp_Abs, Unmit_Total_ICU_Abs, Unmit_Max_ICU_Abs) %>%
-  mutate(Unmit_Inc_Abs = round(Unmit_Inc_Abs),
-         Unmit_Death_Abs = round(Unmit_Death_Abs),
-         Unmit_Total_Hosp_Abs = round(Unmit_Total_Hosp_Abs),
-         Unmit_Max_Hosp_Abs = round(Unmit_Max_Hosp_Abs),
-         Unmit_Total_ICU_Abs = round(Unmit_Total_ICU_Abs),
-         Unmit_Max_ICU_Abs = round(Unmit_Max_ICU_Abs))
-write.csv(abs_numbers_unmitigated, file = "Outputs/All_Countries_Suppression/Absolute_Numbers_Unmitigated.csv")
-
-x <- country_suppression_output %>%
-  select(Unmit_Death_Abs, Supp_0.2_Death_Abs, Supp_1.6_Death_Abs)
-
-sum(x[, 1] * 1000) - sum(x[, 2] * 1000)
-sum(x[, 1] * 1000) - sum(x[, 3] * 1000)
-
-region <- data.frame(Country = pop_WPP$Region..subregion..country.or.area.., Region = pop_WPP$region)
-region_numbers <- country_suppression_output %>%
-  select(-Unmit_Max_Hosp_Abs, -Supp_0.2_Max_Hosp_Abs, -Supp_1.6_Max_Hosp_Abs,
-         -Unmit_Max_ICU_Abs, -Supp_0.2_Max_ICU_Abs, -Supp_1.6_Max_ICU_Abs) %>%
-  left_join(region, by = c("Country" = "Country")) %>%
-  filter(!is.na(Region)) %>%
-  select(Country, Region, everything()) %>%
-  gather(metric, value, -Country, -Region) %>%
-  group_by(Region, metric) %>%
-  summarise(sum = sum(value)) %>%
-  spread(metric, sum) %>%
-  select(Region, 
-         Unmit_Inc_Abs, Supp_0.2_Inc_Abs, Supp_1.6_Inc_Abs,
-         Unmit_Death_Abs, Supp_0.2_Death_Abs, Supp_1.6_Death_Abs,
-         Unmit_Total_Hosp_Abs, Supp_0.2_Total_Hosp_Abs, Supp_1.6_Total_Hosp_Abs,
-         Unmit_Total_ICU_Abs, Supp_0.2_Total_ICU_Abs, Supp_1.6_Total_ICU_Abs)
-
-colnames(region_numbers) <- c("Region", 
-                              "Unmitigated Incidence", "Suppression 0.2 Incidence", "Suppression 1.6 Incidence",
-                              "Unmitigated Deaths", "Suppression 0.2 Deaths", "Suppression 1.6 Deaths",
-                              "Unmitigated Hospitalisations", "Suppression 0.2 Hospitalisations", "Suppression 1.6 Hospitalisations",
-                              "Unmitigated Critical Care", "Suppression 0.2 Critical Care", "Suppression 1.6 Critical Care")
-
-write.csv(region_numbers, file = "Outputs/All_Countries_Suppression/Region_Specific_Numbers.csv")
-
+saveRDS(country_suppression_output, file = paste0("Outputs/Raw_All_Countries_Supp_Output/All_Countries_Suppression_Output_R0_", R0_req, ".Rds"))
