@@ -84,13 +84,6 @@ for (i in 5:8) {
   counter <- counter + 1
 }
 
-ncol_supp <- 3
-ncol_mit <- 2
-theme(axis.title.y = element_text(size = 13.5, vjust = +1)) 
-guides(colour = guide_legend(ncol = ncol_mit), fill = guide_legend(ncol = ncol_mit))
-guides(colour = guide_legend(ncol = ncol_supp), fill = guide_legend(ncol = ncol_supp))
-
-
 # Plotting Suppression Output for R03 and ICU Occupancy
 counter <- 1
 supp_names <- c("e", "f", "g", "h")
@@ -130,71 +123,97 @@ figure <- e + f + g + h +
   a + b + c + d +
   plot_layout(design = layout, guides = "collect") +
   plot_annotation(tag_levels = 'A') & 
-  theme(plot.tag = element_text(size = 25, face = "bold"),
-        legend.position = "bottom", legend.box = "horizontal")
+  theme(plot.tag = element_text(size = 25, face = "bold"))
 figure
 
-# # LICs
-# LIC_ICU_capacity <- beds_per_million_df$ICU_median[1]/10
-# LIC_mitigation <- ICU_LIC_mitigation$data
-# LIC_unmitigated <- LIC_mitigation[LIC_mitigation$scenario == "a_nothing", ]
-# LIC_mitigated <- LIC_mitigation[LIC_mitigation$scenario == "b_mitigation", ]
-# LIC_mitigated_plus <- LIC_mitigation[LIC_mitigation$scenario == "c_mitigation_plus", ]
-# 
-# LIC_unmitigated_peak <- max(LIC_unmitigated$median/millions/10)
-# LIC_mitigated_peak <- max(LIC_mitigated$median/millions/10)
-# LIC_mitigated_plus_peak <- max(LIC_mitigated_plus$median/millions/10)
-# 
-# LIC_capacity_exceed <- c(LIC_unmitigated_peak/LIC_ICU_capacity,
-#                          LIC_mitigated_peak/LIC_ICU_capacity, 
-#                          LIC_mitigated_plus_peak/LIC_ICU_capacity)
-# 
-# # LMICs
-# LMIC_ICU_capacity <- beds_per_million_df$ICU_median[2]/10
-# LMIC_mitigation <- ICU_LMIC_mitigation$data
-# LMIC_unmitigated <- LMIC_mitigation[LMIC_mitigation$scenario == "a_nothing", ]
-# LMIC_mitigated <- LMIC_mitigation[LMIC_mitigation$scenario == "b_mitigation", ]
-# LMIC_mitigated_plus <- LMIC_mitigation[LMIC_mitigation$scenario == "c_mitigation_plus", ]
-# 
-# LMIC_unmitigated_peak <- max(LMIC_unmitigated$median/millions/10)
-# LMIC_mitigated_peak <- max(LMIC_mitigated$median/millions/10)
-# LMIC_mitigated_plus_peak <- max(LMIC_mitigated_plus$median/millions/10)
-# 
-# LMIC_capacity_exceed <- c(LMIC_unmitigated_peak/LMIC_ICU_capacity, 
-#                           LMIC_mitigated_peak/LMIC_ICU_capacity, 
-#                           LMIC_mitigated_plus_peak/LMIC_ICU_capacity)
-# 
-# # UMIC
-# UMIC_ICU_capacity <- beds_per_million_df$ICU_median[3]/10
-# UMIC_mitigation <- ICU_UMIC_mitigation$data
-# UMIC_unmitigated <- UMIC_mitigation[UMIC_mitigation$scenario == "a_nothing", ]
-# UMIC_mitigated <- UMIC_mitigation[UMIC_mitigation$scenario == "b_mitigation", ]
-# UMIC_mitigated_plus <- UMIC_mitigation[UMIC_mitigation$scenario == "c_mitigation_plus", ]
-# 
-# UMIC_unmitigated_peak <- max(UMIC_unmitigated$median/millions/10)
-# UMIC_mitigated_peak <- max(UMIC_mitigated$median/millions/10)
-# UMIC_mitigated_plus_peak <- max(UMIC_mitigated_plus$median/millions/10)
-# 
-# UMIC_capacity_exceed <- c(UMIC_unmitigated_peak/UMIC_ICU_capacity, 
-#                           UMIC_mitigated_peak/UMIC_ICU_capacity, 
-#                           UMIC_mitigated_plus_peak/UMIC_ICU_capacity)
-# 
-# # HIC
-# HIC_ICU_capacity <- beds_per_million_df$ICU_median[4]/10
-# HIC_mitigation <- ICU_HIC_mitigation$data
-# HIC_unmitigated <- HIC_mitigation[HIC_mitigation$scenario == "a_nothing", ]
-# HIC_mitigated <- HIC_mitigation[HIC_mitigation$scenario == "b_mitigation", ]
-# HIC_mitigated_plus <- HIC_mitigation[HIC_mitigation$scenario == "c_mitigation_plus", ]
-# 
-# HIC_unmitigated_peak <- max(HIC_unmitigated$median/millions/10)
-# HIC_mitigated_peak <- max(HIC_mitigated$median/millions/10)
-# HIC_mitigated_plus_peak <- max(HIC_mitigated_plus$median/millions/10)
-# 
-# HIC_capacity_exceed <- c(HIC_unmitigated_peak/HIC_ICU_capacity, 
-#                          HIC_mitigated_peak/HIC_ICU_capacity, 
-#                          HIC_mitigated_plus_peak/HIC_ICU_capacity)
-# 
-# Table of ICU Bed Demand Exceeding 
-# x <- data.frame(LIC = LIC_capacity_exceed, LMIC = LMIC_capacity_exceed,
-#                 UMIC = UMIC_capacity_exceed, HIC = HIC_capacity_exceed)
-# row.names(x) <- c("Unmitigated", "Mitigation", "Mitigation w/ Elderly Shielding")
+# LICs
+LIC_ICU_capacity <- healthcare_capacity$ICU_median[1]/10
+unmit_LIC <- c(max(Mitigation_1_2.7$ICU_occ_median[Mitigation_1_2.7$strategy == "unmitigated"]/millions/10),
+               max(Mitigation_1_3$ICU_occ_median[Mitigation_1_3$strategy == "unmitigated"]/millions/10),
+               max(Mitigation_1_3.5$ICU_occ_median[Mitigation_1_3.5$strategy == "unmitigated"]/millions/10))
+std_mit_LIC <- c(max(Mitigation_1_2.7$ICU_occ_median[Mitigation_1_2.7$strategy == "std_mitigation"]/millions/10),
+                 max(Mitigation_1_3$ICU_occ_median[Mitigation_1_3$strategy == "std_mitigation"]/millions/10),
+                 max(Mitigation_1_3.5$ICU_occ_median[Mitigation_1_3.5$strategy == "std_mitigation"]/millions/10))
+plus_mit_LIC <- c(max(Mitigation_1_2.7$ICU_occ_median[Mitigation_1_2.7$strategy == "plus_mitigation"]/millions/10),
+                  max(Mitigation_1_3$ICU_occ_median[Mitigation_1_3$strategy == "plus_mitigation"]/millions/10),
+                  max(Mitigation_1_3.5$ICU_occ_median[Mitigation_1_3.5$strategy == "plus_mitigation"]/millions/10))
+LIC_capacity_exceed <- c(unmit_LIC/LIC_ICU_capacity,
+                         std_mit_LIC/LIC_ICU_capacity, 
+                         plus_mit_LIC/LIC_ICU_capacity)
+
+# LMICs
+LMIC_ICU_capacity <- healthcare_capacity$ICU_median[2]/10
+unmit_LMIC <- c(max(Mitigation_2_2.7$ICU_occ_median[Mitigation_2_2.7$strategy == "unmitigated"]/millions/10),
+               max(Mitigation_2_3$ICU_occ_median[Mitigation_2_3$strategy == "unmitigated"]/millions/10),
+               max(Mitigation_2_3.5$ICU_occ_median[Mitigation_2_3.5$strategy == "unmitigated"]/millions/10))
+std_mit_LMIC <- c(max(Mitigation_2_2.7$ICU_occ_median[Mitigation_2_2.7$strategy == "std_mitigation"]/millions/10),
+                 max(Mitigation_2_3$ICU_occ_median[Mitigation_2_3$strategy == "std_mitigation"]/millions/10),
+                 max(Mitigation_2_3.5$ICU_occ_median[Mitigation_2_3.5$strategy == "std_mitigation"]/millions/10))
+plus_mit_LMIC <- c(max(Mitigation_2_2.7$ICU_occ_median[Mitigation_2_2.7$strategy == "plus_mitigation"]/millions/10),
+                  max(Mitigation_2_3$ICU_occ_median[Mitigation_2_3$strategy == "plus_mitigation"]/millions/10),
+                  max(Mitigation_2_3.5$ICU_occ_median[Mitigation_2_3.5$strategy == "plus_mitigation"]/millions/10))
+LMIC_capacity_exceed <- c(unmit_LMIC/LMIC_ICU_capacity,
+                          std_mit_LMIC/LMIC_ICU_capacity, 
+                          plus_mit_LMIC/LMIC_ICU_capacity)
+
+# UMICs
+UMIC_ICU_capacity <- healthcare_capacity$ICU_median[3]/10
+unmit_UMIC <- c(max(Mitigation_3_2.7$ICU_occ_median[Mitigation_3_2.7$strategy == "unmitigated"]/millions/10),
+                max(Mitigation_3_3$ICU_occ_median[Mitigation_3_3$strategy == "unmitigated"]/millions/10),
+                max(Mitigation_3_3.5$ICU_occ_median[Mitigation_3_3.5$strategy == "unmitigated"]/millions/10))
+std_mit_UMIC <- c(max(Mitigation_3_2.7$ICU_occ_median[Mitigation_3_2.7$strategy == "std_mitigation"]/millions/10),
+                  max(Mitigation_3_3$ICU_occ_median[Mitigation_3_3$strategy == "std_mitigation"]/millions/10),
+                  max(Mitigation_3_3.5$ICU_occ_median[Mitigation_3_3.5$strategy == "std_mitigation"]/millions/10))
+plus_mit_UMIC <- c(max(Mitigation_3_2.7$ICU_occ_median[Mitigation_3_2.7$strategy == "plus_mitigation"]/millions/10),
+                   max(Mitigation_3_3$ICU_occ_median[Mitigation_3_3$strategy == "plus_mitigation"]/millions/10),
+                   max(Mitigation_3_3.5$ICU_occ_median[Mitigation_3_3.5$strategy == "plus_mitigation"]/millions/10))
+UMIC_capacity_exceed <- c(unmit_UMIC/UMIC_ICU_capacity,
+                          std_mit_UMIC/UMIC_ICU_capacity, 
+                          plus_mit_UMIC/UMIC_ICU_capacity)
+
+# HIC
+HIC_ICU_capacity <- healthcare_capacity$ICU_median[4]/10
+unmit_HIC <- c(max(Mitigation_4_2.7$ICU_occ_median[Mitigation_4_2.7$strategy == "unmitigated"]/millions/10),
+                max(Mitigation_4_3$ICU_occ_median[Mitigation_4_3$strategy == "unmitigated"]/millions/10),
+                max(Mitigation_4_3.5$ICU_occ_median[Mitigation_4_3.5$strategy == "unmitigated"]/millions/10))
+std_mit_HIC <- c(max(Mitigation_4_2.7$ICU_occ_median[Mitigation_4_2.7$strategy == "std_mitigation"]/millions/10),
+                  max(Mitigation_4_3$ICU_occ_median[Mitigation_4_3$strategy == "std_mitigation"]/millions/10),
+                  max(Mitigation_4_3.5$ICU_occ_median[Mitigation_4_3.5$strategy == "std_mitigation"]/millions/10))
+plus_mit_HIC <- c(max(Mitigation_4_2.7$ICU_occ_median[Mitigation_4_2.7$strategy == "plus_mitigation"]/millions/10),
+                   max(Mitigation_4_3$ICU_occ_median[Mitigation_4_3$strategy == "plus_mitigation"]/millions/10),
+                   max(Mitigation_4_3.5$ICU_occ_median[Mitigation_4_3.5$strategy == "plus_mitigation"]/millions/10))
+HIC_capacity_exceed <- c(unmit_HIC/HIC_ICU_capacity,
+                          std_mit_HIC/HIC_ICU_capacity, 
+                          plus_mit_HIC/HIC_ICU_capacity)
+
+names(LIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
+names(LMIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
+names(UMIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
+names(HIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
+
+LIC_capacity_exceed
+LMIC_capacity_exceed
+UMIC_capacity_exceed
+HIC_capacity_exceed
+
+# Plotting the Severity Parameters Used Here
+profiles <- read.csv("Data/severe_parameters.csv", stringsAsFactors = TRUE)
+age_groups_raw <-c("0_5", "5_10", "10_15", "15_20", "20_25", "25_30", "30_35", "35_40", "40_45", "45_50", "50_55", "55_60", "60_65", "65_70", "70_75", "75_80", "80+")
+profiles$age_group <- factor(profiles$age_group, levels = age_groups_raw)
+profiles <- profiles %>% 
+  gather(value, prob, -age_group) %>%
+  mutate(value = factor(value, levels = c("prob_hosp", "prob_critical", "prob_death")))
+levels(profiles$value)[levels(profiles$value) == "prob_hosp"] <- "Prop. Hospitalised"
+levels(profiles$value)[levels(profiles$value) == "prob_critical"] <- "Prop. Critical Care"
+levels(profiles$value)[levels(profiles$value) == "prob_death"] <- "Prop. Dying"
+
+ggplot(data = profiles, aes(x = age_group, y = prob, fill = value)) +
+  geom_bar(stat = "identity") + 
+  labs(y = "Proportion", x = "Age") +
+  scale_x_discrete(breaks = age_groups_raw, 
+                   labels = c("0", "5", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55", "60", "65", "70", "75", "80")) +
+  scale_fill_manual(name = "Proportion",
+                    values = c("#FFBD26", "#FF5B32", "#F9423B")) +
+  facet_grid(~value) +
+  theme_bw() +
+  theme(legend.position = "bottom")
