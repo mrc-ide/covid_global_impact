@@ -15,7 +15,7 @@ setwd("5_Dynamical_Modelling_Healthcare_Demand/")
 source("Functions/Dynamical_Modelling_Functions.R")
 
 # Loading Model and Initialising Required Data/Parameters
-time_period <- 125 # time period to run over
+time_period <- 250 # time period to run over
 dt <- 0.1 # timestep
 dur_E <- 4.58 # mean duration of incubation period
 dur_I <- 2.09 # mean duration of infectious period
