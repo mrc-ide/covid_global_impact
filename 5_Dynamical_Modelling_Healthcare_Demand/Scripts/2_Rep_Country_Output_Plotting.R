@@ -62,7 +62,7 @@ for (i in 5:8) {
   beds <- healthcare_capacity[counter, ]
   x$strategy <- factor(x$strategy, levels = c("unmitigated", "std_mitigation", "plus_mitigation"))
   assign(mit_names[counter], ggplot(data = x, aes(x = time, y = ICU_occ_median/millions/10, colour = strategy)) +
-    geom_line(size = 2) +
+    geom_line(size = 1) +
     geom_ribbon(aes(x = time, ymin = ICU_occ_lower/millions/10, 
                     ymax = ICU_occ_upper/millions/10, colour = strategy, 
                     fill = strategy, border = NULL), alpha = 0.2, linetype = 0) + 
@@ -75,7 +75,7 @@ for (i in 5:8) {
              ymin = beds$ICU_lower/10, ymax = beds$ICU_upper/10, 
              alpha = 0.2, fill = "grey") + 
     geom_segment(x = 0, y = beds$ICU_median/10, xend = max(x$time), 
-                 yend = beds$ICU_median/10, colour = "black", size = 1, linetype = 2) +
+                 yend = beds$ICU_median/10, colour = "black", size = 0.5, linetype = 2) +
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
           legend.position = "right", legend.title = element_text(size = 12, face = "bold"),
           axis.title.y = element_text(size = 13.5, vjust = +3), axis.title.x = element_text(size = 13.5, vjust = +0),
@@ -85,22 +85,68 @@ for (i in 5:8) {
 }
 
 # Plotting Suppression Output for R03 and ICU Occupancy
+lifting_1 <- read.csv(file = "Outputs/Raw_Rep_Country_Outputs/Lifted_Suppression_Country_1_R0_3_Model_Outputs.csv")[, -1]
+lifting_1 <- lifting_1 %>% 
+  mutate(measure = paste0(measure, "_ICU_occ")) %>%
+  rename(output_type = measure) %>%
+  select(-none)
+
+lifting_2 <- read.csv(file = "Outputs/Raw_Rep_Country_Outputs/Lifted_Suppression_Country_2_R0_3_Model_Outputs.csv") 
+lifting_2 <- lifting_2 %>% 
+  mutate(measure = paste0(measure, "_ICU_occ")) %>%
+  rename(output_type = measure) %>%
+  select(-none)
+
+lifting_3 <- read.csv(file = "Outputs/Raw_Rep_Country_Outputs/Lifted_Suppression_Country_3_R0_3_Model_Outputs.csv") 
+lifting_3 <- lifting_3 %>% 
+  mutate(measure = paste0(measure, "_ICU_occ")) %>%
+  rename(output_type = measure) %>%
+  select(-none)
+
+lifting_4 <- read.csv(file = "Outputs/Raw_Rep_Country_Outputs/Lifted_Suppression_Country_4_R0_3_Model_Outputs.csv") 
+lifting_4 <- lifting_4 %>% 
+  mutate(measure = paste0(measure, "_ICU_occ")) %>%
+  rename(output_type = measure) %>%
+  select(-none)
+
 counter <- 1
 supp_names <- c("e", "f", "g", "h")
 for (i in 17:20) {
   x <- assign(object_names[[i]], read.csv(file_names[[i]])[, -1])
-  x <- x %>%
-    gather(strategy, incidence, -country, -R0, -output_type, -time) %>%
-    spread(output_type, incidence) 
+  if (i == 17) {
+    x <- x %>%
+      filter(output_type == "lower_ICU_occ" | output_type == "median_ICU_occ" | output_type == "upper_ICU_occ") %>%
+      mutate(supp_8_time = lifting_1$incomplete) %>%
+      gather(strategy, incidence, -country, -R0, -output_type, -time) %>%
+      spread(output_type, incidence) 
+  } else if (i == 18) {
+    x <- x %>%
+      filter(output_type == "lower_ICU_occ" | output_type == "median_ICU_occ" | output_type == "upper_ICU_occ") %>%
+      mutate(supp_8_time = lifting_2$incomplete) %>%
+      gather(strategy, incidence, -country, -R0, -output_type, -time) %>%
+      spread(output_type, incidence) 
+  } else if (i == 19) {
+    x <- x %>%
+      filter(output_type == "lower_ICU_occ" | output_type == "median_ICU_occ" | output_type == "upper_ICU_occ") %>%
+      mutate(supp_8_time = lifting_3$incomplete) %>%
+      gather(strategy, incidence, -country, -R0, -output_type, -time) %>%
+      spread(output_type, incidence) 
+  } else {
+    x <- x %>%
+      filter(output_type == "lower_ICU_occ" | output_type == "median_ICU_occ" | output_type == "upper_ICU_occ") %>%
+      mutate(supp_8_time = lifting_4$incomplete) %>%
+      gather(strategy, incidence, -country, -R0, -output_type, -time) %>%
+      spread(output_type, incidence) 
+  }
   x$strategy <- factor(x$strategy, levels = strats)
   beds <- healthcare_capacity[counter, ]
   assign(supp_names[counter], ggplot(data = x, aes(x = time, y = median_ICU_occ/millions/10, colour = strategy)) +
-    geom_line(size = 2) +
+    geom_line(size = 1) +
     geom_ribbon(aes(x = time, ymin = lower_ICU_occ/millions/10, ymax = upper_ICU_occ/millions/10, 
                     colour = strategy, fill = strategy, border = NULL), alpha = 0.2, linetype = 0) + 
     labs(x = "Time (Days)", y = "ICU Bed Occupancy Per Day\n Per 100,000 Population") +
     annotate("rect", xmin = min(x$time), xmax = max(x$time), ymin = beds$ICU_lower/10, ymax = beds$ICU_upper/10, alpha = 0.2, fill = "grey") + 
-    geom_segment(x = 0, y = beds$ICU_median/10, xend = max(x$time), yend = beds$ICU_median/10, colour = "black", size = 1, linetype = 2) +
+    geom_segment(x = 0, y = beds$ICU_median/10, xend = max(x$time), yend = beds$ICU_median/10, colour = "black", size = 0.5, linetype = 2) +
     theme_bw() +
     scale_colour_supp +
     scale_fill_supp + 
@@ -114,13 +160,14 @@ for (i in 17:20) {
   counter <- counter + 1
 }
 
+# 18 X 7 
 layout <- "ABCD
            ABCD
            EFGH
            EFGH"
 
-figure <- e + f + g + h +
-  a + b + c + d +
+figure <-  a + b + c + d + 
+  e + f + g + h +
   plot_layout(design = layout, guides = "collect") +
   plot_annotation(tag_levels = 'A') & 
   theme(plot.tag = element_text(size = 25, face = "bold"))
@@ -186,10 +233,10 @@ HIC_capacity_exceed <- c(unmit_HIC/HIC_ICU_capacity,
                           std_mit_HIC/HIC_ICU_capacity, 
                           plus_mit_HIC/HIC_ICU_capacity)
 
-names(LIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
-names(LMIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
-names(UMIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
-names(HIC_capacity_exceed) <- c("Unmit_Med", "Unmit_Low", "Unmit_High", "Mit_Med", "Mit_Low", "Mit_High", "+Mit_Med", "+Mid_Low", "+Mit_High")
+names(LIC_capacity_exceed) <- c("Unmit_Low", "Unmit_Med", "Unmit_High", "Mit_Low", "Mit_Med", "Mit_High", "+Mit_Low", "+Mid_Med", "+Mit_High")
+names(LMIC_capacity_exceed) <- c("Unmit_Low", "Unmit_Med", "Unmit_High", "Mit_Low", "Mit_Med", "Mit_High", "+Mit_Low", "+Mid_Med", "+Mit_High")
+names(UMIC_capacity_exceed) <- c("Unmit_Low", "Unmit_Med", "Unmit_High", "Mit_Low", "Mit_Med", "Mit_High", "+Mit_Low", "+Mid_Med", "+Mit_High")
+names(HIC_capacity_exceed) <- c("Unmit_Low", "Unmit_Med", "Unmit_High", "Mit_Low", "Mit_Med", "Mit_High", "+Mit_Low", "+Mid_Med", "+Mit_High")
 
 LIC_capacity_exceed
 LMIC_capacity_exceed
