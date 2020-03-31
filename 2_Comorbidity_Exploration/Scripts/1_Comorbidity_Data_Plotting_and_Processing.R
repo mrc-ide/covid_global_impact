@@ -3,6 +3,8 @@ library(tidyverse); library(lattice); library(viridisLite); library(RColorBrewer
 library(patchwork); library(cowplot);
 
 # Loading In Data Used Across Multiple Analysis Strands
+final_size <- read.csv("Data/Global_unmitigated_and_mitigated_epidemics_2.4_to_3.5.csv")
+WPP <- read.csv("Data/WPP_demog_matrix.csv")
 world_bank_metadata <- read.csv("Data/World_Bank_Country_Metadata.csv", fileEncoding = 'UTF-8-BOM') %>%
   select(TableName, income_group)
 world_bank_countries <- world_bank_metadata %>%
@@ -22,6 +24,8 @@ age_levels <- c("0 to 5", "5 to 9", "10 to 14", "15 to 19", "20 to 24", "25 to 2
                 "30 to 34", "35 to 39", "40 to 44", "45 to 49", "50 to 54", "55 to 59", 
                 "60 to 64", "65 to 69", "70 to 74", "75 to 79", "80 plus")
 age_levels_final <- c("0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", 
+                    "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+")
+age_levels_WPP <- c("0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", 
                     "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80+")
 income_groups <- c("Low income", "Lower middle income", "Upper middle income", "High income")
 
@@ -81,151 +85,275 @@ como_df <- como_df %>%
   mutate(age_group = age_new) %>% 
   select(-age_new) 
 
-# COPD 5.2, 5.8
-COPD <- como_df %>%
-  filter(cause_name == "Chronic obstructive pulmonary disease") %>% 
-  group_by(income_group, age_group) %>%
-  summarise(mean = mean(value)) %>%
-  select(income_group, age_group, mean) 
-COPD_Plot <- ggplot(COPD, aes(income_group, age_group, fill = mean)) + 
-  geom_tile() +
-  labs(y = "Age Group", x = "Income Group") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0, 0.26), breaks = c(0, 0.05, 0.10, 0.15, 0.20, 0.25),
-                       guide = "legend") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 9, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.title.y = element_text(size = 13.5, vjust = +5), 
-        axis.title.x = element_blank(), 
-        plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
-        legend.title = element_blank(), legend.text = element_text(size = 12),
-        legend.key.size = unit(1, "cm"), plot.title = element_text(size = 14, face = "bold"),
-        legend.key.width = unit(0.5, "cm")) + 
-  guides(fill = guide_legend(reverse = TRUE)) 
+# Replacing and Checking the Problem Spellings in the WPP Data
+WPP <- WPP %>%
+  mutate(Region..subregion..country.or.area.. = as.character(Region..subregion..country.or.area..))
+WPP_countries <- WPP %>%
+  select(Region..subregion..country.or.area..)
+WPP_countries <- unique(WPP_countries)
+WPP_countries <- as.character(unlist(WPP_countries))
+WPP_countries <- WPP_countries[order(WPP_countries)]
+WPP_problem_spellings <- WPP_countries[which(!(WPP_countries %in% world_bank_countries))]
+WPP_problem_spellings <- WPP_problem_spellings[order(WPP_problem_spellings)]
+WPP_correct <- c("Bahamas, The", "Taiwan", "Curaçao", "Czech Republic", "Egypt, Arab Rep.", "French Guiana",
+                 "Gambia, The", "Guadeloupe", "Iran, Islamic Rep.", "Korea, Dem. People's Rep.", "Martinique",
+                 "Mayotte", "Micronesia, Fed. Sts.", "Reunion", "Slovak Republic", "Palestine", 
+                 "Virgin Islands (U.S.)", "Venezuela, RB", "Western Sahara", "Yemen, Rep.")
+for(i in 1:length(WPP$Region..subregion..country.or.area..)) {
+  if (WPP$Region..subregion..country.or.area..[i] %in% WPP_problem_spellings) {
+    index <- which(WPP_problem_spellings %in% WPP$Region..subregion..country.or.area..[i])
+    WPP$Region..subregion..country.or.area..[i] <- WPP_correct[index]
+    print(i)
+  }
+}
+WPP_countries <- WPP %>%
+  select(Region..subregion..country.or.area..) 
+WPP_countries <- unique(WPP_countries)
+WPP_countries <- as.character(unlist(WPP_countries))
+WPP_countries <- WPP_countries[order(WPP_countries)]
+WPP_problem_spellings <- WPP_countries[which(!(WPP_countries %in% world_bank_countries))]
 
-# Diabetes 5.2, 5.8
-diabetes <- como_df %>%
-  filter(cause_name == "Diabetes and kidney diseases") %>% 
-  group_by(income_group, age_group) %>%
-  summarise(mean = mean(value)) %>%
-  select(income_group, age_group, mean) 
-diabetes_plot <- ggplot(diabetes, aes(income_group, age_group, fill = mean)) + 
-  geom_tile() +
-  labs(y = "Age Group", x = "Income Group") +
-  scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0, 0.625), breaks = c(0, 0.125, 0.25, 0.375, 0.5, 0.625),
-                       guide = "legend") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 9, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.title.y = element_text(size = 13.5, vjust = +5), 
-        axis.title.x = element_blank(), 
-        plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
-        legend.title = element_blank(), legend.text = element_text(size = 12),
-        legend.key.size = unit(1, "cm"), plot.title = element_text(size = 14, face = "bold"),
-        legend.key.width = unit(0.5, "cm")) + 
-  guides(fill = guide_legend(reverse = TRUE)) 
+# Population Linking
+WPP_pop <- WPP[, c(3, 13:33)]
+age_group_names <- colnames(WPP_pop)[-1]
+age_group_names <- gsub("X", "", age_group_names)
+age_group_names <- gsub("\\.", "-", age_group_names)
+colnames(WPP_pop) <- c("country", age_group_names)
+WPP_pop <- WPP_pop %>%
+  mutate(`80+` = `80-84` + `85-89` + `90-94` + `95-99` + `100-`) %>%
+  select(-`80-84`, -`85-89`, -`90-94`, -`95-99`, -`100-`) %>%
+  gather(age_group, population, -country)
+total_pop_WPP <- WPP_pop %>%
+  group_by(country) %>%
+  summarise(total_pop = sum(population) * 1000)
+WPP_como <- como_df %>% 
+  left_join(total_pop_WPP, by = c("country" = "country")) %>%
+  left_join(WPP_pop, by = c("country" = "country", "age_group" = "age_group")) %>%
+  mutate(age_population = population * 1000) %>%
+  select(-population)
 
+# Final Epidemic Size Linking
+final_size <- final_size %>%
+  filter(R0 == 3) %>%
+  select(Country, Strategy, grep("infected_", colnames(final_size))) %>%
+  mutate(Country = as.character(Country))
+names_index <- grep("infected_", colnames(final_size))
+colnames(final_size)[names_index] <- age_levels_WPP
+final_size_countries <- final_size$Country[order(final_size$Country)]
+final_size <- final_size %>%
+  gather(age_group, number_infected, -Country, - Strategy) %>%
+  mutate(number_infected = number_infected * 1000)
 
-# CVD 5.2, 5.8 or 6.38, 6.55
-CVD <- como_df %>%
+final_size_problem_spellings <- unique(final_size_countries[which(!(final_size_countries %in% WPP_como$country))])
+final_size_correct <- c("Aruba", "Bahamas, The", "Channel Islands", "Taiwan", "Curaçao", "Czech Republic",
+                        "Egypt, Arab Rep.", "French Guiana", "French Polynesia", "Gambia, The", "Guadeloupe",
+                        "Hong Kong", "Iran, Islamic Rep.", "Korea, Dem. People's Rep.", "Macao", "Martinique",
+                        "Mayotte", "Micronesia (Fed. States of)", "New Caledonia", "Réunion", "Slovak Republic",
+                        "Palestine", "Virgin Islands (U.S.)", "Venezuela, RB", "Western Sahara", "Yemen, Rep.")
+for(i in 1:length(final_size$Country)) {
+  if (final_size$Country[i] %in% final_size_problem_spellings) {
+    index <- which(final_size_problem_spellings %in% final_size$Country[i])
+    final_size$Country[i] <- final_size_correct[index]
+    print(i)
+  }
+}
+final_size_countries <- final_size$Country
+final_size_countries <- unique(final_size_countries)
+final_size_countries <- as.character(unlist(final_size_countries))
+final_size_countries <- final_size_countries[order(final_size_countries)]
+final_size_problem_spellings <- final_size_countries[which(!(final_size_countries %in% WPP_como$country))]
+
+# Creating the Final Df
+causes <- c("Cardiovascular diseases", "Chronic obstructive pulmonary disease", "Diabetes and kidney diseases",
+            "HIV/AIDS", "Tuberculosis", "Nutritional deficiencies")
+final_df <- WPP_como %>%
+  left_join(final_size, by = c("country" = "Country", "age_group" = "age_group")) %>%
+  filter(!is.na(number_infected), cause_name %in% causes) %>%
+  rename(percent_comorb = value) %>%
+  mutate(percent_infected_and_comorb = number_infected * percent_comorb/total_pop) %>%
+  mutate(Strategy = factor(Strategy, levels = c("Unmitigated", "Social distancing whole population", "Enhanced social distancing of elderly")))
+included_countries <- unique(final_df$country)[order(unique(final_df$country))]
+missing_countries <- final_size_countries[!(final_size_countries %in% included_countries)]
+wb_missing_countries <- world_bank_countries[!(world_bank_countries %in% final_size_countries)]
+fs_missing_countries <- final_size_countries[!(final_size_countries %in% world_bank_countries)]
+
+raw_como_df <- readRDS("Data/Processed_Comobidity_Data.rds")
+
+# CVD
+CVD_age <- final_df %>%
+  filter(cause_name == "Cardiovascular diseases") %>%
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+a <- ggplot(CVD_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "") +
+  scale_fill_manual(breaks = levels(CVD_age$age_group),
+                    values = rev(magma(length(levels(CVD_age$age_group))))) +
+  theme(legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+CVD <- raw_como_df %>%
   filter(cause_name == "Cardiovascular diseases") %>% 
   group_by(income_group, age_group) %>%
   summarise(mean = mean(value)) %>%
   select(income_group, age_group, mean) 
-CVD_plot <- ggplot(CVD, aes(income_group, age_group, fill = mean)) + 
+b <- ggplot(CVD, aes(income_group, age_group, fill = mean)) + 
   geom_tile() +
-  labs(y = "Age Group", x = "Income Group") +
+  labs(y = "", x = "") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
                        limits = c(0, 0.505), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5),
                        guide = "legend") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 9, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.title.y = element_text(size = 13.5, vjust = +5), 
+        axis.text.x = element_blank(), 
+        axis.text.y = element_text(size = 8, face = "bold"),
+        axis.title.y = element_blank(), 
         axis.title.x = element_blank(), 
+        axis.ticks.x = element_blank(), 
         plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
         legend.title = element_blank(), legend.text = element_text(size = 12),
-        legend.key.size = unit(1, "cm"), plot.title = element_text(size = 14, face = "bold"),
-        legend.key.width = unit(0.5, "cm"))  + 
-  guides(fill = guide_legend(reverse = TRUE)) 
+        legend.key.size = unit(0.75, "cm"), plot.title = element_text(size = 14, face = "bold"),
+        legend.key.width = unit(0.5, "cm"), legend.position = "left", 
+        panel.border=element_rect(fill = NA, colour = "black", size = 0.5))  +
+  guides(fill = guide_legend(reverse = TRUE, label.position = "left")) 
 
-# HIV
-HIV <- como_df %>%
+
+# HIV/AIDs
+hiv_age <- final_df %>%
+  filter(cause_name == "HIV/AIDS") %>%
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+c <- ggplot(hiv_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "") +
+  scale_fill_manual(breaks = levels(hiv_age$age_group),
+                    values = rev(magma(length(levels(hiv_age$age_group))))) +
+  theme(legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+HIV <- raw_como_df %>%
   filter(cause_name == "HIV/AIDS") %>% 
   group_by(income_group, age_group) %>%
   summarise(mean = mean(value)) %>%
   select(income_group, age_group, mean) 
-HIV_plot <- ggplot(HIV, aes(income_group, age_group, fill = mean)) + 
+d <- ggplot(HIV, aes(income_group, age_group, fill = mean)) + 
   geom_tile() +
-  labs(y = "Age Group", x = "Income Group") +
-  scale_fill_distiller(palette = "PuBu", direction = 1,
+  labs(y = "", x = "") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
                        limits = c(0, 0.045), breaks = c(0, 0.01, 0.02, 0.03, 0.04, 0.05),
                        guide = "legend") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 9, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.title.y = element_text(size = 13.5, vjust = +5), 
+        axis.text.y = element_text(size = 8, face = "bold"),
+        axis.title.y = element_blank(), 
         axis.title.x = element_blank(), 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
         plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
         legend.title = element_blank(), legend.text = element_text(size = 12),
-        legend.key.size = unit(1, "cm"), plot.title = element_text(size = 14, face = "bold"),
-        legend.key.width = unit(0.5, "cm"))  +
-  guides(fill = guide_legend(reverse = TRUE)) 
-
-# Tuberculosis
-Tuberculosis <- como_df %>%
-  filter(cause_name == "Tuberculosis") %>% 
-  group_by(income_group, age_group) %>%
-  summarise(mean = mean(value)) %>%
-  select(income_group, age_group, mean) 
-tuberculosis_plot <- ggplot(Tuberculosis, aes(income_group, age_group, fill = mean)) + 
-  geom_tile() +
-  labs(y = "Age Group", x = "Income Group") +
-  scale_fill_distiller(palette = "PuBu", direction = 1,
-                       limits = c(0, 0.5), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5),
-                       guide = "legend") +
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 9, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.title.y = element_text(size = 13.5, vjust = +5), 
-        axis.title.x = element_blank(), 
-        plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
-        legend.title = element_blank(), legend.text = element_text(size = 12),
-        legend.key.size = unit(1, "cm"), plot.title = element_text(size = 14, face = "bold"),
-        legend.key.width = unit(0.5, "cm"))  +
-  guides(fill = guide_legend(reverse = TRUE)) 
+        legend.key.size = unit(0.75, "cm"), plot.title = element_text(size = 14, face = "bold"),
+        legend.key.width = unit(0.5, "cm"), legend.position = "left",
+        panel.border=element_rect(fill = NA, colour = "black", size = 0.5)) +
+  guides(fill = guide_legend(reverse = TRUE, label.position = "left")) 
 
 # Nutrition
-Nutrition <- como_df %>%
+nutrition_age <- final_df %>%
+  filter(cause_name == "Nutritional deficiencies") %>%
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+e <- ggplot(nutrition_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "Income Group") +
+  scale_fill_manual(breaks = levels(nutrition_age$age_group),
+                    values = rev(magma(length(levels(nutrition_age$age_group))))) +
+  theme(legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+Nutrition <- raw_como_df %>%
   filter(cause_name == "Nutritional deficiencies") %>% 
   group_by(income_group, age_group) %>%
   summarise(mean = mean(value)) %>%
   select(income_group, age_group, mean) 
-nutrition_plot <- ggplot(Nutrition, aes(income_group, age_group, fill = mean)) + 
+f <- ggplot(Nutrition, aes(income_group, age_group, fill = mean)) + 
   geom_tile() +
-  labs(y = "Age Group", x = "Income Group") +
-  scale_fill_distiller(palette = "PuBu", direction = 1,
+  labs(y = "", x = "") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
                        limits = c(0, 0.55), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.text.x = element_text(size = 9, face = "bold"),
-        axis.text.y = element_text(size = 10, face = "bold"),
-        axis.title.y = element_text(size = 13.5, vjust = +5), 
+        axis.text.x = element_text(size = 10, face = "bold", angle = -90, hjust = 0, vjust = 0.25),
+        axis.text.y = element_text(size = 8, face = "bold"),
+        axis.title.y = element_blank(), 
         axis.title.x = element_blank(), 
         plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
         legend.title = element_blank(), legend.text = element_text(size = 12),
-        legend.key.size = unit(1, "cm"), plot.title = element_text(size = 14, face = "bold"),
-        legend.key.width = unit(0.5, "cm"))  +
-  guides(fill = guide_legend(reverse = TRUE)) 
+        legend.key.size = unit(0.75, "cm"), plot.title = element_text(size = 14, face = "bold"),
+        legend.key.width = unit(0.5, "cm"), legend.position = "left",
+        panel.border=element_rect(fill = NA, colour = "black", size = 0.5)) +
+  guides(fill = guide_legend(reverse = TRUE, label.position = "left")) 
+
+# 9.5 by 7.8
+layout <- "ABBBBBBB
+CDDDDDDD
+EFFFFFFF"
+
+figure <- b + a + d + c + f + e +
+  plot_layout(design = layout)
+figure 
 
 
-# Figure creation: 11.06 x 6.53 
-layout <- "ABC
-           CDE"
+e <- ggplot(nutrition_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "Income Group") +
+  scale_fill_manual(breaks = levels(nutrition_age$age_group),
+                    values = rev(magma(length(levels(nutrition_age$age_group))))) +
+  theme(legend.position = "right",
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
 
-figure <- diabetes_plot + CVD_plot + COPD_Plot +
-          HIV_plot + tuberculosis_plot + nutrition_plot +
-  plot_annotation(tag_levels = 'A') & 
-  theme(plot.tag = element_text(size = 25, face = "bold"))
-figure
+#####
+# COPD
+COPD_age <- final_df %>%
+  filter(cause_name == "Chronic obstructive pulmonary disease") %>%
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+b <- ggplot(COPD_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  scale_fill_manual(breaks = levels(nutrition_age$age_group),
+                    values = rev(magma(length(levels(nutrition_age$age_group)))))
+
+# Diabetes
+diabetes_age <- final_df %>%
+  filter(cause_name == "Diabetes and kidney diseases") %>%
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+c <- ggplot(diabetes_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  scale_fill_manual(breaks = levels(nutrition_age$age_group),
+                    values = rev(magma(length(levels(nutrition_age$age_group)))))
+
+
+# Tuberculosis
+tuberculosis_age <- final_df %>%
+  filter(cause_name == "Tuberculosis") %>%
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+e <- ggplot(tuberculosis_age, aes(x = income_group, y = mean, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  scale_fill_manual(breaks = levels(nutrition_age$age_group),
+                    values = rev(magma(length(levels(nutrition_age$age_group)))))
+
