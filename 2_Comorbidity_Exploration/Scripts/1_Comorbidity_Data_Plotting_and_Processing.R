@@ -169,13 +169,23 @@ causes <- c("Cardiovascular diseases", "Chronic obstructive pulmonary disease", 
 final_df <- WPP_como %>%
   left_join(final_size, by = c("country" = "Country", "age_group" = "age_group")) %>%
   filter(!is.na(number_infected), cause_name %in% causes) %>%
-  rename(percent_comorb = value) %>%
-  mutate(percent_infected_and_comorb = number_infected * percent_comorb/total_pop) %>%
+  rename(prop_comorb = value) %>%
+  mutate(number_infected_and_comorb = number_infected * prop_comorb) %>%
   mutate(Strategy = factor(Strategy, levels = c("Unmitigated", "Social distancing whole population", "Enhanced social distancing of elderly")))
 included_countries <- unique(final_df$country)[order(unique(final_df$country))]
 missing_countries <- final_size_countries[!(final_size_countries %in% included_countries)]
 wb_missing_countries <- world_bank_countries[!(world_bank_countries %in% final_size_countries)]
 fs_missing_countries <- final_size_countries[!(final_size_countries %in% world_bank_countries)]
+
+check <- final_df %>%
+  filter(cause_name == "HIV/AIDS", income_group ==  "LIC" | income_group == "LMIC",
+         country == "Nigeria", Strategy == "Unmitigated") 
+
+check <- final_df %>%
+  filter(cause_name == "HIV/AIDS", Strategy == "Unmitigated", 
+         income_group ==  "LIIC") %>%
+  group_by(country) %>%
+  summarise(sum = sum(percent_infected_and_comorb))
 
 raw_como_df <- readRDS("Data/Processed_Comobidity_Data.rds")
 
@@ -183,9 +193,17 @@ raw_como_df <- readRDS("Data/Processed_Comobidity_Data.rds")
 CVD_age <- final_df %>%
   filter(cause_name == "Cardiovascular diseases") %>%
   group_by(income_group, Strategy, age_group) %>%
-  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-a <- ggplot(CVD_age, aes(x = income_group, y = mean, fill = age_group)) +
+
+CVD_age <- final_df %>%
+  filter(cause_name == "Cardiovascular diseases") %>%
+  group_by(income_group, Strategy) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(age_population)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) 
+
+a <- ggplot(CVD_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
   theme_bw() +
@@ -195,6 +213,7 @@ a <- ggplot(CVD_age, aes(x = income_group, y = mean, fill = age_group)) +
   theme(legend.position = "none",
         strip.background = element_blank(),
         strip.text.x = element_blank())
+
 CVD <- raw_como_df %>%
   filter(cause_name == "Cardiovascular diseases") %>% 
   group_by(income_group, age_group) %>%
@@ -224,9 +243,29 @@ b <- ggplot(CVD, aes(income_group, age_group, fill = mean)) +
 hiv_age <- final_df %>%
   filter(cause_name == "HIV/AIDS") %>%
   group_by(income_group, Strategy, age_group) %>%
-  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-c <- ggplot(hiv_age, aes(x = income_group, y = mean, fill = age_group)) +
+
+hiv_age <- final_df %>%
+  mutate(number_comorbid = age_population * prop_comorb) %>%
+  filter(cause_name == "HIV/AIDS") %>% 
+  group_by(country,income_group) %>%
+  summarise(total_comorbid = sum(number_comorbid), total_pop = sum(age_population)) %>%
+  mutate(prop_comorbid = total_comorbid/total_pop) %>%
+  filter(income_group == "LMIC")
+
+hiv_age <- final_df %>%
+  filter(cause_name == "HIV/AIDS") %>%
+  filter(Strategy == "Unmitigated") %>%
+  group_by(country, income_group) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(age_population)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
+  filter(income_group == "LIC")
+
+sum(hiv_age$total_infected_with_comorb)/sum(hiv_age$total_pop)
+
+c <- ggplot(hiv_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
   theme_bw() +

@@ -15,8 +15,8 @@ setwd("5_Dynamical_Modelling_Healthcare_Demand/")
 source("Functions/Dynamical_Modelling_Functions.R")
 
 # Loading Model and Initialising Required Data/Parameters
-time_period <- 250 # time period to run over
-dt <- 0.1 # timestep
+time_period <- 150 # time period to run over
+dt <- 0.2 # timestep
 dur_E <- 4.58 # mean duration of incubation period
 dur_I <- 2.09 # mean duration of infectious period
 number_betas <- 2 # number of beta values (model is flexible and can change beta over time)
@@ -27,9 +27,9 @@ time_in_hospital <- 8  # duration of hospitalisation if not requiring critical c
 time_in_critical_care <- 16  # duration of hospitalisation if requiring critical care
 delay_onset_death <- 21  # time between symtom onset (assumed E->I transition) and death
 suppress_triggers <- c(2, 16) # threshold (weekly deaths per million) required to trigger suppression
-millions <- 20 # standardise to 20 million population
+millions <- 20 # standardise to 10 million population
 suppress_adjusted <- suppress_triggers * millions # convert per million triggers to equivalent in raw deaths for specified population size
-number_model_runs <- 20 # number model runs to work out when triggers should be implemented
+number_model_runs <- 25 # number model runs to work out when triggers should be implemented
 suppress_reduction <- 0.25
 countries <- length(pop_WPP$Index)
 
@@ -134,7 +134,7 @@ for(i in 1:countries){
   for (k in 1:length(mean_trigger_time)) {
     
     # Number of model replicates to run 
-    replicates <- 5
+    replicates <- 3
     
     # Generating Storage Vectors and Matrices
     temp_incidence_storage <- vector(mode = "numeric", length = replicates) 

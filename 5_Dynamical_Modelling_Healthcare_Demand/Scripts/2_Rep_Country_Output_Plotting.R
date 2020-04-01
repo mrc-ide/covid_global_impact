@@ -11,6 +11,7 @@ healthcare_capacity <- raw_healthcare_capacity %>%
   mutate(hosp_median_pred = 1000000 * hosp_median_pred/1000, hosp_lower = 1000000 * hosp_lower/1000, hosp_upper = 1000000 * hosp_upper/1000) %>%
   select(income_group, hosp_median_pred, hosp_lower, hosp_upper, ICU_median, ICU_lower, ICU_upper) %>% # converting from beds per 1000 to beds per million population
   mutate(ICU_median = hosp_median_pred * ICU_median/100, ICU_lower = hosp_lower * ICU_lower/100, ICU_upper = hosp_upper * ICU_upper/100)
+profiles <- read.csv("Data/severe_parameters.csv", stringsAsFactors = TRUE)
 
 # Setting Working Directory to Current Analysis Strand
 setwd("5_Dynamical_Modelling_Healthcare_Demand/")
@@ -244,7 +245,6 @@ UMIC_capacity_exceed
 HIC_capacity_exceed
 
 # Plotting the Severity Parameters Used Here
-profiles <- read.csv("Data/severe_parameters.csv", stringsAsFactors = TRUE)
 age_groups_raw <-c("0_5", "5_10", "10_15", "15_20", "20_25", "25_30", "30_35", "35_40", "40_45", "45_50", "50_55", "55_60", "60_65", "65_70", "70_75", "75_80", "80+")
 profiles$age_group <- factor(profiles$age_group, levels = age_groups_raw)
 profiles <- profiles %>% 
@@ -264,3 +264,4 @@ ggplot(data = profiles, aes(x = age_group, y = prob, fill = value)) +
   facet_grid(~value) +
   theme_bw() +
   theme(legend.position = "bottom")
+
