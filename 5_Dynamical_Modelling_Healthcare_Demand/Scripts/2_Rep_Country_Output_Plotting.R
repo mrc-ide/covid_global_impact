@@ -252,7 +252,7 @@ profiles <- profiles %>%
   mutate(value = factor(value, levels = c("prob_hosp", "prob_critical", "prob_death")))
 levels(profiles$value)[levels(profiles$value) == "prob_hosp"] <- "Prop. Hospitalised"
 levels(profiles$value)[levels(profiles$value) == "prob_critical"] <- "Prop. Critical Care"
-levels(profiles$value)[levels(profiles$value) == "prob_death"] <- "Prop. Dying"
+levels(profiles$value)[levels(profiles$value) == "prob_death"] <- "IFR"
 
 ggplot(data = profiles, aes(x = age_group, y = prob, fill = value)) +
   geom_bar(stat = "identity") + 

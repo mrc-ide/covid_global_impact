@@ -102,8 +102,8 @@ NAs_R0_3.0 <- R0_3.0 %>%
   left_join(world_bank_metadata, by = "Country") %>%
   filter(Strategy == "Unmit") %>%
   filter(is.na(region))
-length(unique(region_R0_3.0$Country))
-sum(region_R0_3.0$Incidence)
+length(unique(NAs_R0_3.0$Country))
+sum(NAs_R0_3.0$Incidence)
 
 region_R0_2.7 <- R0_2.7 %>%
   left_join(world_bank_metadata, by = "Country") %>%
@@ -135,7 +135,6 @@ region_R0_3.5 <- R0_3.5 %>%
               names_from = Strategy, 
               values_from = c("total_incidence", "total_deaths")) 
 
-region_R0_3.0$Country[which(is.na(region_R0_3.0$income_group))]
 
 colnames(region_numbers) <- c("Region", 
                               "Unmitigated Incidence", "Suppression 0.2 Incidence", "Suppression 1.6 Incidence",

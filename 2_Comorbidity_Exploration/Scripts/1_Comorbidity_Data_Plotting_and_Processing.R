@@ -6,7 +6,7 @@ library(patchwork); library(cowplot);
 final_size <- read.csv("Data/Global_unmitigated_and_mitigated_epidemics_2.4_to_3.5.csv")
 WPP <- read.csv("Data/WPP_demog_matrix.csv")
 world_bank_metadata <- read.csv("Data/World_Bank_Country_Metadata.csv", fileEncoding = 'UTF-8-BOM') %>%
-  select(TableName, income_group)
+  select(TableName, income_group, region)
 world_bank_countries <- world_bank_metadata %>%
   filter(income_group != "") %>%
   select(TableName)
@@ -72,7 +72,7 @@ como_df <- comorbidity_data %>%
   spread(age_name, val) %>%
   mutate(`0 to 5` = (0.2 * `<1 year` + 0.8 * `1 to 4`)) %>%
   select(-`<1 year`, -`1 to 4`) %>%
-  gather(age_group, value, -cause_name, -income_group, -country) %>%
+  gather(age_group, value, -cause_name, -income_group, -country, -region) %>%
   mutate(age_group = factor(age_group, levels = age_levels),
          income_group = case_when(income_group == "Low income" ~ "LIC",
                                   income_group == "Lower middle income" ~ "LMIC", 
@@ -170,24 +170,14 @@ final_df <- WPP_como %>%
   left_join(final_size, by = c("country" = "Country", "age_group" = "age_group")) %>%
   filter(!is.na(number_infected), cause_name %in% causes) %>%
   rename(prop_comorb = value) %>%
+  mutate(number_comorb = prop_comorb * age_population)%>%
   mutate(number_infected_and_comorb = number_infected * prop_comorb) %>%
-  mutate(Strategy = factor(Strategy, levels = c("Unmitigated", "Social distancing whole population", "Enhanced social distancing of elderly")))
+  mutate(Strategy = factor(Strategy, levels = c("Unmitigated", "Social distancing whole population", "Enhanced social distancing of elderly"))) %>%
+  mutate(age_group = factor(age_group, levels = age_levels_final))
 included_countries <- unique(final_df$country)[order(unique(final_df$country))]
 missing_countries <- final_size_countries[!(final_size_countries %in% included_countries)]
 wb_missing_countries <- world_bank_countries[!(world_bank_countries %in% final_size_countries)]
 fs_missing_countries <- final_size_countries[!(final_size_countries %in% world_bank_countries)]
-
-check <- final_df %>%
-  filter(cause_name == "HIV/AIDS", income_group ==  "LIC" | income_group == "LMIC",
-         country == "Nigeria", Strategy == "Unmitigated") 
-
-check <- final_df %>%
-  filter(cause_name == "HIV/AIDS", Strategy == "Unmitigated", 
-         income_group ==  "LIIC") %>%
-  group_by(country) %>%
-  summarise(sum = sum(percent_infected_and_comorb))
-
-raw_como_df <- readRDS("Data/Processed_Comobidity_Data.rds")
 
 # CVD
 CVD_age <- final_df %>%
@@ -196,12 +186,10 @@ CVD_age <- final_df %>%
   summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
   mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-
-CVD_age <- final_df %>%
-  filter(cause_name == "Cardiovascular diseases") %>%
-  group_by(income_group, Strategy) %>%
-  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(age_population)) %>%
-  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) 
+averted <- sum(CVD_age$total_infected_with_comorb[CVD_age$Strategy == "Unmitigated"]) - sum(CVD_age$total_infected_with_comorb[CVD_age$Strategy == "Enhanced social distancing of elderly"])
+HIC_averted <- sum(CVD_age$total_infected_with_comorb[CVD_age$Strategy == "Unmitigated" & CVD_age$income_group == "HIC"]) - 
+  sum(CVD_age$total_infected_with_comorb[CVD_age$Strategy == "Enhanced social distancing of elderly" & CVD_age$income_group == "HIC"])
+HIC_averted/averted
 
 a <- ggplot(CVD_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
@@ -214,16 +202,17 @@ a <- ggplot(CVD_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_g
         strip.background = element_blank(),
         strip.text.x = element_blank())
 
-CVD <- raw_como_df %>%
+CVD <- final_df %>%
   filter(cause_name == "Cardiovascular diseases") %>% 
+  filter(Strategy == "Unmitigated") %>%
   group_by(income_group, age_group) %>%
-  summarise(mean = mean(value)) %>%
-  select(income_group, age_group, mean) 
-b <- ggplot(CVD, aes(income_group, age_group, fill = mean)) + 
+  summarise(prop_comorb = sum(number_comorb)/sum(age_population))
+
+b <- ggplot(CVD, aes(income_group, age_group, fill = prop_comorb)) + 
   geom_tile() +
   labs(y = "", x = "") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
-                       limits = c(0, 0.505), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5),
+                       limits = c(0, 0.51), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5),
                        guide = "legend") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         axis.text.x = element_blank(), 
@@ -247,24 +236,6 @@ hiv_age <- final_df %>%
   mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
 
-hiv_age <- final_df %>%
-  mutate(number_comorbid = age_population * prop_comorb) %>%
-  filter(cause_name == "HIV/AIDS") %>% 
-  group_by(country,income_group) %>%
-  summarise(total_comorbid = sum(number_comorbid), total_pop = sum(age_population)) %>%
-  mutate(prop_comorbid = total_comorbid/total_pop) %>%
-  filter(income_group == "LMIC")
-
-hiv_age <- final_df %>%
-  filter(cause_name == "HIV/AIDS") %>%
-  filter(Strategy == "Unmitigated") %>%
-  group_by(country, income_group) %>%
-  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(age_population)) %>%
-  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
-  filter(income_group == "LIC")
-
-sum(hiv_age$total_infected_with_comorb)/sum(hiv_age$total_pop)
-
 c <- ggplot(hiv_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
@@ -275,12 +246,13 @@ c <- ggplot(hiv_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_g
   theme(legend.position = "none",
         strip.background = element_blank(),
         strip.text.x = element_blank())
-HIV <- raw_como_df %>%
+
+HIV <- final_df %>%
   filter(cause_name == "HIV/AIDS") %>% 
+  filter(Strategy == "Unmitigated") %>%
   group_by(income_group, age_group) %>%
-  summarise(mean = mean(value)) %>%
-  select(income_group, age_group, mean) 
-d <- ggplot(HIV, aes(income_group, age_group, fill = mean)) + 
+  summarise(prop_comorb = sum(number_comorb)/sum(age_population))
+d <- ggplot(HIV, aes(income_group, age_group, fill = prop_comorb)) + 
   geom_tile() +
   labs(y = "", x = "") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
@@ -303,9 +275,11 @@ d <- ggplot(HIV, aes(income_group, age_group, fill = mean)) +
 nutrition_age <- final_df %>%
   filter(cause_name == "Nutritional deficiencies") %>%
   group_by(income_group, Strategy, age_group) %>%
-  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-e <- ggplot(nutrition_age, aes(x = income_group, y = mean, fill = age_group)) +
+  
+e <- ggplot(nutrition_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
   theme_bw() +
@@ -315,12 +289,13 @@ e <- ggplot(nutrition_age, aes(x = income_group, y = mean, fill = age_group)) +
   theme(legend.position = "none",
         strip.background = element_blank(),
         strip.text.x = element_blank())
-Nutrition <- raw_como_df %>%
+
+Nutrition <- final_df %>%
   filter(cause_name == "Nutritional deficiencies") %>% 
+  filter(Strategy == "Unmitigated") %>%
   group_by(income_group, age_group) %>%
-  summarise(mean = mean(value)) %>%
-  select(income_group, age_group, mean) 
-f <- ggplot(Nutrition, aes(income_group, age_group, fill = mean)) + 
+  summarise(prop_comorb = sum(number_comorb)/sum(age_population))
+f <- ggplot(Nutrition, aes(income_group, age_group, fill = prop_comorb)) + 
   geom_tile() +
   labs(y = "", x = "") +
   scale_fill_distiller(palette = "OrRd", direction = 1,
@@ -346,53 +321,179 @@ figure <- b + a + d + c + f + e +
   plot_layout(design = layout)
 figure 
 
+# HIV/AIDs by Region
+hiv_age_region <- final_df %>%
+  filter(cause_name == "HIV/AIDS") %>%
+  group_by(region, Strategy, age_group) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
 
-e <- ggplot(nutrition_age, aes(x = income_group, y = mean, fill = age_group)) +
+supp <- ggplot(hiv_age_region, aes(x = region, y = prop_comorb_and_inf, fill = age_group)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(~Strategy) + 
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "") +
+  scale_x_discrete(labels = c("East Asia & Pacific" = "E.Asia",
+                              "Europe & Central Asia" = "Europe",
+                              "Latin America & Caribbean" = "L.America",
+                              "Middle East & North Africa" = "M.East",
+                              "North America" = "N.America",
+                              "South Asia" = "S.Asia",
+                              "Sub-Saharan Africa" = "SSA")) +
+  scale_fill_manual(breaks = levels(hiv_age_region$age_group),
+                    values = rev(magma(length(levels(hiv_age_region$age_group))))) +
+  theme(legend.position = "right")
+
+income_group_pop <- final_df %>%
+  filter(Strategy == "Unmitigated") %>%
+  filter(cause_name == "Chronic obstructive pulmonary disease") %>% 
+  group_by(income_group) %>%
+  summarise(total_pop = sum(age_population))
+ 
+income_group_pop$total_pop[4]/sum(income_group_pop$total_pop)
+
+#####
+COPD_age <- final_df %>%
+  filter(cause_name == "Chronic obstructive pulmonary disease") %>% 
+  group_by(income_group, Strategy, age_group) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
+  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
+averted <- sum(COPD_age$total_infected_with_comorb[COPD_age$Strategy == "Unmitigated"]) - sum(COPD_age$total_infected_with_comorb[COPD_age$Strategy == "Enhanced social distancing of elderly"])
+HIC_averted <- sum(COPD_age$total_infected_with_comorb[COPD_age$Strategy == "Unmitigated" & COPD_age$income_group == "HIC"]) - 
+  sum(COPD_age$total_infected_with_comorb[COPD_age$Strategy == "Enhanced social distancing of elderly" & COPD_age$income_group == "HIC"])
+HIC_averted/averted
+
+
+h <- ggplot(COPD_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
   theme_bw() +
   labs(y = "Prop. Pop", x = "Income Group") +
-  scale_fill_manual(breaks = levels(nutrition_age$age_group),
-                    values = rev(magma(length(levels(nutrition_age$age_group))))) +
-  theme(legend.position = "right",
+  scale_fill_manual(breaks = levels(COPD_age$age_group),
+                    values = rev(magma(length(levels(COPD_age$age_group))))) +
+  theme(legend.position = "none",
         strip.background = element_blank(),
         strip.text.x = element_blank())
 
-#####
-# COPD
-COPD_age <- final_df %>%
-  filter(cause_name == "Chronic obstructive pulmonary disease") %>%
-  group_by(income_group, Strategy, age_group) %>%
-  summarise(mean = mean(percent_infected_and_comorb)) %>%
-  mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-b <- ggplot(COPD_age, aes(x = income_group, y = mean, fill = age_group)) +
-  geom_bar(stat = "identity") + 
-  facet_grid(~Strategy) + 
-  scale_fill_manual(breaks = levels(nutrition_age$age_group),
-                    values = rev(magma(length(levels(nutrition_age$age_group)))))
+COPD <- final_df %>%
+  filter(cause_name == "Chronic obstructive pulmonary disease") %>% 
+  filter(Strategy == "Unmitigated") %>%
+  group_by(income_group, age_group) %>%
+  summarise(prop_comorb = sum(number_comorb)/sum(age_population))
+g <- ggplot(COPD, aes(income_group, age_group, fill = prop_comorb)) + 
+  geom_tile() +
+  labs(y = "", x = "") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0, 0.3), breaks = c(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10, face = "bold", angle = -90, hjust = 0, vjust = 0.25),
+        axis.text.y = element_text(size = 8, face = "bold"),
+        axis.title.y = element_blank(), 
+        axis.title.x = element_blank(), 
+        plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
+        legend.title = element_blank(), legend.text = element_text(size = 12),
+        legend.key.size = unit(0.75, "cm"), plot.title = element_text(size = 14, face = "bold"),
+        legend.key.width = unit(0.5, "cm"), legend.position = "left",
+        panel.border=element_rect(fill = NA, colour = "black", size = 0.5)) +
+  guides(fill = guide_legend(reverse = TRUE, label.position = "left")) 
 
 # Diabetes
 diabetes_age <- final_df %>%
-  filter(cause_name == "Diabetes and kidney diseases") %>%
+  filter(cause_name == "Diabetes and kidney diseases") %>% 
   group_by(income_group, Strategy, age_group) %>%
-  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-c <- ggplot(diabetes_age, aes(x = income_group, y = mean, fill = age_group)) +
+averted <- sum(diabetes_age$total_infected_with_comorb[diabetes_age$Strategy == "Unmitigated"]) - sum(diabetes_age$total_infected_with_comorb[diabetes_age$Strategy == "Enhanced social distancing of elderly"])
+HIC_averted <- sum(diabetes_age$total_infected_with_comorb[diabetes_age$Strategy == "Unmitigated" & diabetes_age$income_group == "HIC"]) - 
+  sum(diabetes_age$total_infected_with_comorb[diabetes_age$Strategy == "Enhanced social distancing of elderly" & diabetes_age$income_group == "HIC"])
+HIC_averted/averted
+
+j <- ggplot(diabetes_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
-  scale_fill_manual(breaks = levels(nutrition_age$age_group),
-                    values = rev(magma(length(levels(nutrition_age$age_group)))))
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "Income Group") +
+  scale_fill_manual(breaks = levels(COPD_age$age_group),
+                    values = rev(magma(length(levels(COPD_age$age_group))))) +
+  theme(legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
+
+diabetes <- final_df %>%
+  filter(cause_name == "Diabetes and kidney diseases") %>% 
+  filter(Strategy == "Unmitigated") %>%
+  group_by(income_group, age_group) %>%
+  summarise(prop_comorb = sum(number_comorb)/sum(age_population))
+
+i <- ggplot(diabetes, aes(income_group, age_group, fill = prop_comorb)) + 
+  geom_tile() +
+  labs(y = "", x = "") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0, 0.6), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10, face = "bold", angle = -90, hjust = 0, vjust = 0.25),
+        axis.text.y = element_text(size = 8, face = "bold"),
+        axis.title.y = element_blank(), 
+        axis.title.x = element_blank(), 
+        plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
+        legend.title = element_blank(), legend.text = element_text(size = 12),
+        legend.key.size = unit(0.75, "cm"), plot.title = element_text(size = 14, face = "bold"),
+        legend.key.width = unit(0.5, "cm"), legend.position = "left",
+        panel.border=element_rect(fill = NA, colour = "black", size = 0.5)) +
+  guides(fill = guide_legend(reverse = TRUE, label.position = "left")) 
 
 
-# Tuberculosis
-tuberculosis_age <- final_df %>%
+
+# Diabetes
+tb_age <- final_df %>%
   filter(cause_name == "Tuberculosis") %>%
   group_by(income_group, Strategy, age_group) %>%
-  summarise(mean = mean(percent_infected_and_comorb)) %>%
+  summarise(total_infected_with_comorb = sum(number_infected_and_comorb), total_pop = sum(total_pop)) %>%
+  mutate(prop_comorb_and_inf = total_infected_with_comorb/total_pop) %>%
   mutate(age_group = factor(age_group, levels = rev(age_levels_WPP)))
-e <- ggplot(tuberculosis_age, aes(x = income_group, y = mean, fill = age_group)) +
+
+l <- ggplot(tb_age, aes(x = income_group, y = prop_comorb_and_inf, fill = age_group)) +
   geom_bar(stat = "identity") + 
   facet_grid(~Strategy) + 
-  scale_fill_manual(breaks = levels(nutrition_age$age_group),
-                    values = rev(magma(length(levels(nutrition_age$age_group)))))
+  theme_bw() +
+  labs(y = "Prop. Pop", x = "Income Group") +
+  scale_fill_manual(breaks = levels(tb_age$age_group),
+                    values = rev(magma(length(levels(tb_age$age_group))))) +
+  theme(legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.x = element_blank())
 
+tb <- final_df %>%
+  filter(cause_name == "Tuberculosis") %>%
+  filter(Strategy == "Unmitigated") %>%
+  group_by(income_group, age_group) %>%
+  summarise(prop_comorb = sum(number_comorb)/sum(age_population))
+
+k <- ggplot(tb, aes(income_group, age_group, fill = prop_comorb)) + 
+  geom_tile() +
+  labs(y = "", x = "") +
+  scale_fill_distiller(palette = "OrRd", direction = 1,
+                       limits = c(0, 0.5), breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size = 10, face = "bold", angle = -90, hjust = 0, vjust = 0.25),
+        axis.text.y = element_text(size = 8, face = "bold"),
+        axis.title.y = element_blank(), 
+        axis.title.x = element_blank(), 
+        plot.margin = margin(0.2, 0.2, 0.2, 0.2, "cm"),
+        legend.title = element_blank(), legend.text = element_text(size = 12),
+        legend.key.size = unit(0.75, "cm"), plot.title = element_text(size = 14, face = "bold"),
+        legend.key.width = unit(0.5, "cm"), legend.position = "left",
+        panel.border=element_rect(fill = NA, colour = "black", size = 0.5)) +
+  guides(fill = guide_legend(reverse = TRUE, label.position = "left")) 
+
+# 9.5 by 7.8
+layout <- "ABBBBBBB
+CDDDDDDD
+EFFFFFFF"
+
+figure <- g + h + i + j + k + l +
+  plot_layout(design = layout)
+figure 
