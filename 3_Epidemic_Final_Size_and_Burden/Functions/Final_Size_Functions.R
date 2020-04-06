@@ -105,7 +105,7 @@ diff_from_opt_mit<-function(x,rmod,c_mat,demog,init,guess_hom,guess_modifiers,it
 ### same as above but with a fixed reduction "elderly_sd" in 70+
 diff_from_opt_mit_elderly_abs<-function(x,elderly_sd,rmod,c_mat,demog,init,guess_hom,guess_modifiers,iterates,reiterates,restarts,tol){
   elderly_dist<-c_mat
-  elderly_dist[14:16,]<-elderly_dist[14:16,]*(1-elderly_sd)/x
+  elderly_dist[15:16,]<-elderly_dist[15:16,]*(1-elderly_sd)/x
   fit<-get_AR(R=R,rmod=x*rmod,c_mat=elderly_dist,demog=demog,init=init,guess_hom=guess_hom,guess_modifiers = guess_modifiers,iterates =  iterates,reiterates = reiterates,restarts=restarts,tol=tol)
   si<-fit$par/demog
   reduced_mat<-t(sapply(seq(demog),function(x){
@@ -208,7 +208,7 @@ get_ARs_IFR<-function(country_name,contact_mat,demog_all,elderly_sd,IFRs,hosp_pr
   
   ## adjust contact matrix for the mitigation with enhanced SD of elderly
   elderly_dist<-c_mat
-  elderly_dist[14:16,]<-elderly_dist[14:16,]*(1-elderly_sd)/fit_mit_elderly_abs$par
+  elderly_dist[15:16,]<-elderly_dist[15:16,]*(1-elderly_sd)/fit_mit_elderly_abs$par
   
   
   ### get final sizes for unmitigated, mitigated and mitigated with SD of elderly
@@ -235,7 +235,7 @@ get_ARs_IFR<-function(country_name,contact_mat,demog_all,elderly_sd,IFRs,hosp_pr
   deaths_age[1,1:15]<-unmit$par[1:15]*IFRs[1:15]
   deaths_age[1,16]<-unmit$par[16]*demog_all[16]/sum(demog_all[16:21])*IFRs[16]
   deaths_age[1,17]<-unmit$par[16]*sum(demog_all[17:21])/sum(demog_all[16:21])*IFRs[17]
-  IFR[1]<-sum(deaths_age[1,])/sum(demog)
+  IFR[1]<-sum(deaths_age[1,])/sum(unmit$par)
   hosps[1]<-sum(hosps_age[1,])/sum(demog)
   crits[1]<-sum(crits_age[1,])/sum(demog)
   reductions[1]<-0
@@ -254,7 +254,7 @@ get_ARs_IFR<-function(country_name,contact_mat,demog_all,elderly_sd,IFRs,hosp_pr
   deaths_age[2,1:15]<-mit$par[1:15]*IFRs[1:15]
   deaths_age[2,16]<-mit$par[16]*demog_all[16]/sum(demog_all[16:21])*IFRs[16]
   deaths_age[2,17]<-mit$par[16]*sum(demog_all[17:21])/sum(demog_all[16:21])*IFRs[17]
-  IFR[2]<-sum(deaths_age[2,])/sum(demog)
+  IFR[2]<-sum(deaths_age[2,])/sum(mit$par)
   hosps[2]<-sum(hosps_age[2,])/sum(demog)
   crits[2]<-sum(crits_age[2,])/sum(demog)
   final_vals[3]<-sum(mit_eld$par)
@@ -272,7 +272,7 @@ get_ARs_IFR<-function(country_name,contact_mat,demog_all,elderly_sd,IFRs,hosp_pr
   deaths_age[3,1:15]<-mit_eld$par[1:15]*IFRs[1:15]
   deaths_age[3,16]<-mit_eld$par[16]*demog_all[16]/sum(demog_all[16:21])*IFRs[16]
   deaths_age[3,17]<-mit_eld$par[16]*sum(demog_all[17:21])/sum(demog_all[16:21])*IFRs[17]
-  IFR[3]<-sum(deaths_age[3,])/sum(demog)
+  IFR[3]<-sum(deaths_age[3,])/sum(mit_eld$par)
   hosps[3]<-sum(hosps_age[3,])/sum(demog)
   crits[3]<-sum(crits_age[3,])/sum(demog)
   return(list("country"=country_name,"demog"=demog,"R"=R,"rates"=ai/ng_eigen,"reductions"=reductions,"final_size"=final_vals,"age_final_sizes"=age_dists,"age_ARs"=age_props,"deaths_by_age"=deaths_age,"hospitalisations_by_age"=hosps_age,"critical_by_age"=crits_age,"IFR"=IFR,"hospital_prob"=hosps,"critical_prob"=crits,"demog_w_80s"=long_demogs,"errors"=final_err))
