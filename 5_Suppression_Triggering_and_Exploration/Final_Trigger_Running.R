@@ -1,9 +1,10 @@
 # Loading Required Libraries
-library(tidyverse); library(zoo)
+library(tidyverse); library(zoo); library(squire)
 
 # Sourcing Functions for Running Model With Threshold Based Triggers
 source("trigger_running_function.R")
-load("data/income_strata_healthcare_capacity.rda")
+setwd("5_Suppression_Triggering_and_Exploration/")
+income_strata_healthcare_capacity <- squire::income_strata_healthcare_capacity
 
 # Trigger Thresholds to Use During Model Running
 trigger_thresholds <- c(1, 2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120,
@@ -13,7 +14,6 @@ trigger_thresholds <- c(1, 2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120,
                         20000, 30000, 40000, 50000, 75000, 100000, 150000)
 
 # Loading in ICU Capacity
-load("data/income_strata_healthcare_capacity.rda")
 ICU <- income_strata_healthcare_capacity$ICU_beds
 LIC_icu <- (ICU[1] * 50000000 /1000) / 2
 LMIC_icu <- (ICU[2] * 50000000 /1000) / 2
@@ -27,7 +27,7 @@ tt_R0 <- c(0, 50)
 suppression_reduction <- 0.25
 suppression_duration <- 30
 mitigation_reduction <- 1
-max_lockdowns <- 20
+max_lockdowns <- 30
 
 ### 1. Running Without Capacity Constraints to Examine Time In Suppression vs Capacity Required
 ###     -> For Runs Where We Have an Initial Suppression Based On Known Timings for Income Strata
