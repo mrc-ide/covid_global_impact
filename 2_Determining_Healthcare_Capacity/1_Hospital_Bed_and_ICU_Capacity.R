@@ -1,12 +1,71 @@
 # Loading in Libraries and Relevant Functions/Packages
 library(tidyverse); library(zoo); library(dismo); library(conflicted); library(gbm); 
 library(mltools); library(data.table); library(gtools); library(patchwork); 
-library(squire); library(gridExtra)
+library(squire); library(gridExtra); library(squire)
 conflict_prefer("select", "dplyr")
 conflict_prefer("filter", "dplyr")
 conflict_prefer("area", "patchwork")
 
-# Load In Data Used Across Multiple Analyses
+# Set Working Directory
+setwd("2_Determining_Healthcare_Capacity/")
+
+# Sourcing Functions
+source("Functions/Healthcare_Capacity_Functions.R")
+
+# Set Seed and Toggle Whether Fresh Run Required
+set.seed(1020191)
+fresh_run <- FALSE
+
+# Loading In World Bank Covariates
+## Maternal Mortality
+maternal_mortality <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Maternal_Mortality_Ratio.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(maternal_mortality)[2:length(colnames(maternal_mortality))] <- gsub('X', '', colnames(maternal_mortality)[2:length(colnames(maternal_mortality))])
+maternal_mortality <- maternal_mortality %>%
+  gather(year, maternal_mortality, -country_code)
+
+## Electricity
+electricity <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Electricity.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(electricity)[2:length(colnames(electricity))] <- gsub('X', '', colnames(electricity)[2:length(colnames(electricity))])
+electricity <- electricity %>%
+  gather(year, electricity, -country_code)
+
+## Proportion Population 0-14
+prop_pop <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Pop_Prop.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(prop_pop)[2:length(colnames(prop_pop))] <- gsub('X', '', colnames(prop_pop)[2:length(colnames(prop_pop))])
+prop_pop <- prop_pop %>%
+  gather(year, prop_pop, -country_code)
+
+## Teacher Pupil Ratio 
+school_ratio <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Teacher_Pupil.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(school_ratio)[2:length(colnames(school_ratio))] <- gsub('X', '', colnames(school_ratio)[2:length(colnames(school_ratio))])
+school_ratio <- school_ratio %>%
+  gather(year, school_ratio, -country_code)
+
+## Rural
+rural <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Rural_Percentage.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(rural)[2:length(colnames(rural))] <- gsub('X', '', colnames(rural)[2:length(colnames(rural))])
+rural <- rural %>%
+  gather(year, rural, -country_code)
+
+## Domestic Expenditure
+domestic_GDP <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Domestic_Healthcare_Expenditure_GDP.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(domestic_GDP)[2:length(colnames(domestic_GDP))] <- gsub('X', '', colnames(domestic_GDP)[2:length(colnames(domestic_GDP))])
+domestic_GDP <- domestic_GDP %>%
+  gather(year, domestic_GDP, -country_code)
+
+## Infant Mortality
+infant_mortality <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_Infant_Mortality_Ratio.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(infant_mortality)[2:length(colnames(infant_mortality))] <- gsub('X', '', colnames(infant_mortality)[2:length(colnames(infant_mortality))])
+infant_mortality <- infant_mortality %>%
+  gather(year, infant_mortality, -country_code)
+
+## School Enrollment
+school_enrollment <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Covariates/World_Bank_School_Enrollment.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
+colnames(school_enrollment)[2:length(colnames(school_enrollment))] <- gsub('X', '', colnames(school_enrollment)[2:length(colnames(school_enrollment))])
+school_enrollment <- school_enrollment %>%
+  gather(year, school_enrollment, -country_code)
+
+# Load In World Bank Data Dictionary With Information About Income Group
 world_bank_dd <- read.csv("Data/World_Bank_Country_Metadata.csv", 
                           stringsAsFactors = FALSE, header = TRUE, 
                           fileEncoding = 'UTF-8-BOM') %>%
@@ -14,17 +73,6 @@ world_bank_dd <- read.csv("Data/World_Bank_Country_Metadata.csv",
 countries <- world_bank_dd$country_code[world_bank_dd$income_group %in% 
                                           c("Low income", "Lower middle income", 
                                             "Upper middle income","High income")]
-
-# Set Working Directory to Specific Folder
-setwd("2_Determining_Healthcare_Capacity/")
-
-# Sourcing Functions
-source("Functions/Healthcare_Capacity_Functions.R")
-source("Scripts/World_Bank_Data_Loading.R")
-
-# Set Seed and Toggle Whether Fresh Run Required
-set.seed(1020191)
-fresh_run <- FALSE
 
 # Load In World Bank Hospital Beds Data and Changing Column Names 
 raw_hospital_beds <- read.csv("Data/Hospital_Bed_Capacity_Data/World_Bank_Hospital_Beds.csv", 
@@ -170,7 +218,7 @@ income_status <- most_recent %>%
   summarise(hosp_mean_pred = mean(pred_beds), hosp_median_pred = median(pred_beds), hosp_lower = quantile(pred_beds, 0.25), hosp_upper = quantile(pred_beds, 0.75)) %>%
   select(-hosp_mean_pred)
 
-# ICU Bed Capacity 
+# Loading In Results from ICU Bed Capacity Systematic Review  
 raw_ICU <- read.csv("Data/ICU_Capacity_Data/ICU_Mini_Systematic_Review.csv")
 ICU <- raw_ICU %>%
   select(Country_Code, ICU_Per_100_Hospital_Beds) %>%
@@ -206,7 +254,7 @@ c <- ggplot(hosp_and_ICU_beds, aes(fill = income_group, x = income_group, y = IC
         axis.title.x = element_text(size = 13.5, vjust = +2)) + 
   labs(y = "Number ICU Beds /100 Hospital Beds")
 
-# Healthcare Quality and How it Affects IFR Estimates
+# Healthcare Quality and Its Impacts on Estimates of the IFR By Age
 # Age groups
 age_groups <- c("0-5", "5-10", "10-15", "15-20", "20-25", "25-30", "30-35", "35-40", "40-45", 
                 "45-50", "50-55", "55-60", "60-65", "65-70", "70-75", "75-80", "80+")
@@ -217,22 +265,22 @@ ages <- c(2.5, 7.5, 12.5, 17.5, 22.5, 27.5, 32.5, 37.5, 42.5, 47.5, 52.5, 57.5,
 prob_hosp <- c(0.000744192, 0.000634166, 0.001171109, 0.002394593, 0.005346437,
                0.010289885, 0.016234604, 0.023349169, 0.028944623, 0.038607042, 	
                0.057734879, 0.072422135, 0.101602458, 0.116979814, 0.146099064, 
-               0.176634654, 0.18)
+               0.176634654, 0.18) # see squire documentation for full details
 prob_severe <- c(0.05022296, 0.05022296, 0.05022296, 0.05022296, 0.05022296, 
                  0.05022296, 0.05022296, 0.053214942, 0.05974426, 0.074602879, 
                  0.103612417, 0.149427991, 0.223777304, 0.306985918, 0.385779555,
-                 0.461217861, 0.709444444)
+                 0.461217861, 0.709444444) # see squire documentation for full details
 prob_non_severe <- 1 - prob_severe
 
 # Probabilities of dying given symptom type and treatment
-prob_severe_death_treatment <- rep(0.5, 17)
-prob_severe_death_no_treatment <- rep(0.905, 17)
+prob_severe_death_treatment <- rep(0.5, 17) # see squire documentation for full details
+prob_severe_death_no_treatment <- rep(0.905, 17) # see squire documentation for full details
 prob_non_severe_death_treatment <- c(0.0125702, 0.0125702, 0.0125702, 0.0125702, 0.0125702,
                                      0.0125702, 0.0125702, 0.013361147, 0.015104687, 0.019164124,
                                      0.027477519, 0.041762108, 0.068531658, 0.105302319, 0.149305732,
-                                     0.20349534, 0.5804312)
-prob_non_severe_death_poorer_outcomes <- c(rep(0.25, 16), 0.5804312)
-prob_non_severe_death_no_treatment <- rep(0.6, 17)
+                                     0.20349534, 0.5804312) # see squire documentation for full details
+prob_non_severe_death_poorer_outcomes <- c(rep(0.25, 16), 0.5804312) # see squire documentation for full details
+prob_non_severe_death_no_treatment <- rep(0.6, 17) # see squire documentation for full details
 
 # No Healthcare Quality Constraints 
 scen_1 <- (prob_hosp * prob_severe * prob_severe_death_treatment) +
@@ -274,7 +322,7 @@ d <- ggplot(scen_df, aes(x = age_group, y = prob, fill = scenario)) +
         legend.position = "none")
 
 # Calculating IFRs for Each Country Under the Different Healthcare Quality Scenarios 
-countries <- c("Madagascar", "Nicaragua", "Grenada", "Malta")
+countries <- c("Madagascar", "Nicaragua", "Grenada", "Malta") # representative of each income group
 raw_IFRs <- matrix(nrow = 4, ncol = 4)
 average_age <- matrix(nrow = 4, ncol = 4)
 for (i in 1:4) {
@@ -300,16 +348,14 @@ for (i in 1:4) {
   print(i)
 }
 
-row.names(raw_IFRs) <- c("Baseline", "No MV", "No MV & Sub-Optimal Oxygen", "No Oxygen & No MV")
+row.names(raw_IFRs) <- c("Baseline", "No MV", "No MV &\n Poorer\nOutcomes", "No MV &\nNo Oxygen")
 colnames(raw_IFRs) <- c("LIC", "LMIC", "UMIC", "HIC")
 raw_IFRs <- round(raw_IFRs, 2)
-IFRs <- data.frame(Scenario = c("Baseline", "Poorer Outcomes", "No Oxygen", "No Oxygen & No MV"),
-                   LIC = raw_IFRs[, "LIC"], LMIC = raw_IFRs[, "LMIC"],
+IFRs <- data.frame(LIC = raw_IFRs[, "LIC"], LMIC = raw_IFRs[, "LMIC"],
                    UMIC = raw_IFRs[, "UMIC"], HIC = raw_IFRs[, "HIC"])
-e <- grid.table(IFRs, rows = c("", "", "", ""))
-
+e <- grid.table(t(IFRs))
 tt <- ttheme_default(colhead=list(fg_params = list(parse=TRUE)))
-e <- tableGrob(IFRs, rows=NULL, theme=tt)
+e <- tableGrob(t(IFRs), rows=NULL, theme=tt)
 
 # Figure Creation
 layout <- "AABBB
@@ -324,5 +370,5 @@ figure <- a + b + c + d + e +
   plot_layout(design = layout) +
   plot_annotation(tag_levels = 'A') & 
   theme(plot.tag = element_text(size = 25, face = "bold"))
-figure # save this manually width = 12, height = 6.7
+figure # save this manually width = 13, height = 9
 
