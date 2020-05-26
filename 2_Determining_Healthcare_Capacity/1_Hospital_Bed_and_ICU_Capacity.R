@@ -14,7 +14,7 @@ source("Functions/Healthcare_Capacity_Functions.R")
 
 # Set Seed and Toggle Whether Fresh Run Required
 set.seed(1020191)
-fresh_run <- FALSE
+fresh_run <- TRUE
 
 # Loading In World Bank Covariates
 ## Maternal Mortality
@@ -82,25 +82,20 @@ old_names <- colnames(raw_hospital_beds)[3:length(colnames(raw_hospital_beds))]
 new_names <- gsub('X', '', old_names)
 colnames(raw_hospital_beds)[3:length(colnames(raw_hospital_beds))] <- new_names
 
-# Appending Region and Income Group, Filtering Away Rows With No Data
+# Appending Region and Income Group
 raw_hospital_beds <- append_info(raw_hospital_beds, world_bank_dd, countries)
 hospital_beds <- raw_hospital_beds %>%
   mutate(region_new = factor(as.numeric(as.factor(region)))) %>%
   mutate(income_group_new = factor(as.numeric(as.factor(income_group)))) %>%
   select(country_name, country_code, region, income_group, region_new, income_group_new, everything())
+
+# Filtering Away Rows With No Data For Any of the Years 
 index <- min(which(!is.na(as.numeric(colnames(hospital_beds)))))
 rows_all_NAs <- detect_rows_all_NAs(hospital_beds[index:length(hospital_beds)])
 hospital_beds <- hospital_beds[-rows_all_NAs, ]
 hospital_beds <- hospital_beds %>%
   gather(year, hospital_beds, -country_name, -country_code, -region, 
          -income_group, -region_new, -income_group_new)
-
-# Most Recent Hospital Bed Estimates
-raw_most_recent <- hospital_beds %>%
-  filter(!is.na(hospital_beds)) %>%
-  group_by(country_code) %>%
-  filter(year == max(year))
-raw_most_recent <- table(raw_most_recent$year) 
 
 # Adding In Relevant Covariates and One Hot Encoding Where Relevant
 model_inputs <- hospital_beds %>%
@@ -194,7 +189,6 @@ most_recent <- prediction_table %>%
   filter(year == max(year)) %>%
   ungroup() %>%
   select(country_name, year, income_group, region, hospital_beds, pred_beds, beds_to_use)
-table(most_recent$year)
 saveRDS(most_recent, "Outputs/Hospital_Bed_Capacity_Predictions.Rds")
 
 b <- ggplot(most_recent, aes(col = income_group, x = income_group, y = pred_beds)) +
@@ -219,7 +213,7 @@ income_status <- most_recent %>%
   select(-hosp_mean_pred)
 
 # Loading In Results from ICU Bed Capacity Systematic Review  
-raw_ICU <- read.csv("Data/ICU_Capacity_Data/ICU_Mini_Systematic_Review.csv")
+raw_ICU <- read.csv("Data/ICU_Capacity_Data/ICU_Beds_Per_Hospital_Bed_Systematic_Review_Results.csv")
 ICU <- raw_ICU %>%
   select(Country_Code, ICU_Per_100_Hospital_Beds) %>%
   rename(ICU_Beds = ICU_Per_100_Hospital_Beds, country_code = Country_Code) %>%
@@ -370,5 +364,7 @@ figure <- a + b + c + d + e +
   plot_layout(design = layout) +
   plot_annotation(tag_levels = 'A') & 
   theme(plot.tag = element_text(size = 25, face = "bold"))
+pdf("Figure_2_Healthcare_Capacity_and_Quality.pdf", width = 13, height = 9)
 figure # save this manually width = 13, height = 9
+dev.off()
 

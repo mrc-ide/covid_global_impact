@@ -33,7 +33,7 @@ max_lockdowns <- 30
 ###     -> For Runs Where We Have an Initial Suppression Based On Known Timings for Income Strata
 income_strata <- c("LIC", "LMIC", "UMIC", "HIC")
 countries <- c("Madagascar", "Nicaragua", "Grenada", "Malta")
-raw_death_triggers <- c(0, 0.00243, 0.0553, 0.157)
+raw_death_triggers <- c(0, 0, 0.044, 0.202)
 death_triggers <- round(50 * raw_death_triggers)
 a_max_ICU_req <- matrix(nrow = 4, ncol = length(trigger_thresholds))
 a_time_in_lockdown <- matrix(nrow = 4, ncol = length(trigger_thresholds))
@@ -81,24 +81,7 @@ capacity_vs_time <- a_max_ICU %>%
   left_join(a_total_deaths, by = c("setting", "threshold")) %>%
   mutate(setting = factor(setting, levels = c("LIC", "LMIC", "UMIC", "HIC"))) %>%
   mutate(threshold = factor(threshold, levels = paste0("ICU_inc", as.integer(trigger_thresholds)))) %>%
-  group_by(setting, time_in_lockdown) #%>%
-  #filter(max_capacity == min(max_capacity))
-
-x <- capacity_vs_time 
-a <- ggplot(capacity_vs_time, aes(x = time_in_lockdown, y = max_capacity, col = setting)) +
-  geom_path(size = 2) +
-  scale_colour_manual(labels = c("Low Income", "Lower Middle Income", "Upper Middle Income", "High Income"),
-                      values = c("#B7C0EE", "#7067CF", "#362E91", "#241F60"),
-                      name = "Income Strata") +
-  guides(colour = guide_legend(override.aes = list(size = 4))) +
-  xlim(c(0, 0.85)) +
-  geom_point(aes(x = 0.57, y = LIC_icu), colour = "#B7C0EE", size = 5) +
-  geom_point(aes(x = 0.5, y = LMIC_icu), colour = "#7067CF", size = 5) +
-  geom_point(aes(x = 0.45, y = UMIC_icu), colour = "#362E91", size = 5) +
-  geom_point(aes(x = 0.4, y = HIC_icu), colour = "#241F60", size = 5) +
-  theme_bw() +
-  labs(y = "Maximum ICU Capacity Required", x = "Proportion of Time in Lockdown")
-a
+  group_by(setting, time_in_lockdown) 
 saveRDS(capacity_vs_time, "capacity_vs_time.rds")
 
 ### 2. Running With Capacity Constraints to Examine Time In Suppression vs Deaths
@@ -153,23 +136,6 @@ deaths_vs_time <- b_max_ICU %>%
   left_join(b_total_deaths, by = c("setting", "threshold")) %>%
   mutate(setting = factor(setting, levels = c("LIC_poor", "LIC", "LMIC_poor", "LMIC", "UMIC", "HIC"))) %>%
   mutate(threshold = factor(threshold, levels = paste0("ICU_inc", as.integer(trigger_thresholds)))) %>%
-  group_by(setting, time_in_lockdown) %>%
-  filter(deaths == min(deaths)) 
-
-y <- deaths_vs_time
-b <- ggplot(y, aes(x = time_in_lockdown, y = 1000 * deaths/50000000, col = setting)) +
-  geom_path(size = 2, aes(linetype = setting)) +
-  scale_colour_manual(labels = c("Low Income Poor", "Low Income", "Lower Middle Income Poor",
-                                 "Lower Middle Income", "Upper Middle Income", "High Income"),
-                      values = c("#fcb15b", "#B7C0EE", "#FB7171", "#7067CF", "#362E91", "#241F60"),
-                      name = "Income Strata") +
-  xlim(c(0, 0.8)) +
-  scale_linetype_manual(values = c(5, 1, 5, 1, 1, 1)) +
-  guides(colour = guide_legend(override.aes = list(size = 4))) +
-  theme_bw() +
-  labs(y = "Total Number of Deaths", x = "Proportion of Time in Lockdown") +
-  guides(linetype = "none")
-b
-
+  group_by(setting, time_in_lockdown) 
 saveRDS(deaths_vs_time, "deaths_vs_time.rds")
 

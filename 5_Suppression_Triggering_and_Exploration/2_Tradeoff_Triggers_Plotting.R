@@ -3,7 +3,7 @@ library(tidyverse); library(zoo); library(patchwork); library(squire)
 
 # Sourcing Required Functions
 setwd("5_Suppression_Triggering_and_Exploration/")
-source("trigger_running_function.R")
+source("Functions/Trigger_Running_Functions.R")
 
 # Set Seed
 set.seed(100001)
@@ -137,39 +137,6 @@ c <- ggplot(high, aes(x = time, y = median)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#EB55A2", alpha = 0.2, colour = NA) +
   theme_bw()
 
-# Plotting Time In Lockdown vs Maximum ICU Capacity Required 
-time_vs_ICU_capacity <- readRDS("no_constraints_overall_df.rds")
-x <- time_vs_ICU_capacity
-d <- ggplot(x, aes(x = time_in_lockdown, y = max_capacity, col = setting)) +
-  geom_path(size = 2) +
-  scale_colour_manual(labels = c("Low Income", "Lower Middle Income", "Upper Middle Income", "High Income"),
-                      values = c("#B7C0EE", "#7067CF", "#362E91", "#241F60"),
-                      name = "Income Strata") +
-  guides(colour = guide_legend(override.aes = list(size = 4))) +
-  xlim(c(0, 0.8)) +
-  theme_bw() +
-  labs(y = "Maximum ICU Capacity Required", x = "Proportion of Time in Lockdown") +
-  guides(colour = "none")
-
-
-z_check <- y %>%
-  filter(setting == "LIC_poor" | setting == "LMIC_poor")
-# Plotting Time In Lockdown vs Number of Deaths 
-time_vs_deaths <- readRDS("constraints_overall_df.rds")
-y <- time_vs_deaths
-e <- ggplot(y, aes(x = time_in_lockdown, y = 1000 *deaths/50000000, col = setting)) +
-  geom_path(size = 2, aes(linetype = setting)) +
-  scale_colour_manual(labels = c("Low Income Poor", "Low Income", "Lower Middle Income Poor",
-                                 "Lower Middle Income", "Upper Middle Income", "High Income"),
-                      values = c("#fcb15b", "#B7C0EE", "#FB7171", "#7067CF", "#362E91", "#241F60"),
-                      name = "Income Strata") +
-  scale_linetype_manual(values = c(5, 1, 5, 1, 1, 1)) +
-  guides(colour = guide_legend(override.aes = list(size = 4))) +
-  theme_bw() +
-  xlim(c(0, 0.8)) +
-  labs(y = "Deaths Per 1000 Population", x = "Proportion of Time in Lockdown") +
-  guides(linetype = "none", colour = "none")
-
 # Loading in ICU Capacity
 ICU <- income_strata_healthcare_capacity$ICU_beds
 LIC_icu <- (ICU[1] * 50000000 /1000) / 2
@@ -252,7 +219,7 @@ g <- ggplot(LMIC, aes(x = time, y = median)) +
 income_strata <- "UMIC"
 trigger_threshold <- 105
 country <- "Grenada"
-raw_death_trigger <- 3/50
+raw_death_trigger <- 0.044
 death_triggers <- round(50 * raw_death_trigger)
 pop <- get_population(country)
 pop <- (50000000/sum(pop$n)) * pop$n
@@ -287,7 +254,7 @@ h <- ggplot(UMIC, aes(x = time, y = median)) +
 income_strata <- "HIC"
 trigger_threshold <- 213
 country <- "Malta"
-raw_death_trigger <- 8/50
+raw_death_trigger <- 0.202
 death_triggers <- round(50 * raw_death_trigger)
 pop <- get_population(country)
 pop <- (50000000/sum(pop$n)) * pop$n
@@ -317,6 +284,44 @@ i <- ggplot(HIC, aes(x = time, y = median)) +
   geom_line(aes(y = HIC_icu), linetype = "dashed", size = 0.5) +
   geom_line(aes(y = HIC_icu * 2), linetype = "dashed", size = 0.5)
 
+# Plotting Time In Lockdown vs Maximum ICU Capacity Required 
+time_vs_ICU_capacity <- readRDS("Outputs/capacity_vs_time.rds") %>%
+  group_by(setting, time_in_lockdown) %>%
+  filter(max_capacity == min(max_capacity))
+x <- time_vs_ICU_capacity
+d <- ggplot(x, aes(x = time_in_lockdown, y = max_capacity, col = setting)) +
+  geom_path(size = 2) +
+  scale_colour_manual(labels = c("Low Income", "Lower Middle Income", "Upper Middle Income", "High Income"),
+                      values = c("#B7C0EE", "#7067CF", "#362E91", "#241F60"),
+                      name = "Income Strata") +
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  xlim(c(0, 0.85)) +
+  theme_bw() +
+  geom_point(aes(x = median(time_LIC), y = LIC_icu), colour = "#B7C0EE", size = 5) +
+  geom_point(aes(x = median(time_LIMC), y = LMIC_icu), colour = "#7067CF", size = 5) +
+  geom_point(aes(x = median(time_UMIC), y = UMIC_icu), colour = "#362E91", size = 5) +
+  geom_point(aes(x = median(time_HIC), y = HIC_icu), colour = "#241F60", size = 5) +
+  labs(y = "Maximum ICU Capacity Required", x = "Proportion of Time in Lockdown") +
+  guides(colour = "none")
+
+# Plotting Time In Lockdown vs Number of Deaths 
+time_vs_deaths <- readRDS("Outputs/deaths_vs_time.rds") %>%
+  group_by(setting, time_in_lockdown) %>%
+  filter(deaths == min(deaths)) 
+y <- time_vs_deaths
+e <- ggplot(y, aes(x = time_in_lockdown, y = 1000 *deaths/50000000, col = setting)) +
+  geom_path(size = 2, aes(linetype = setting)) +
+  scale_colour_manual(labels = c("Low Income Poor", "Low Income", "Lower Middle Income Poor",
+                                 "Lower Middle Income", "Upper Middle Income", "High Income"),
+                      values = c("#fcb15b", "#B7C0EE", "#FB7171", "#7067CF", "#362E91", "#241F60"),
+                      name = "Income Strata") +
+  scale_linetype_manual(values = c(5, 1, 5, 1, 1, 1)) +
+  guides(colour = guide_legend(override.aes = list(size = 4))) +
+  theme_bw() +
+  xlim(c(0, 0.85)) +
+  labs(y = "Deaths Per 1000 Population", x = "Proportion of Time in Lockdown") +
+  guides(linetype = "none", colour = "none")
+
 layout <- "AAABBB
            AAACCC
            DDFFFF
@@ -328,7 +333,7 @@ layout <- "AAABBB
            EEIIII
            EEIIII"
 
-a + b + c + d + e + f + g + h + i +
+figure <- a + b + c + d + e + f + g + h + i +
   plot_layout(design = layout)
-
+figure 
 
