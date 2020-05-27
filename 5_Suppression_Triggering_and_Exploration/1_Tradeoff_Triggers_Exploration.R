@@ -2,8 +2,8 @@
 library(tidyverse); library(zoo); library(squire)
 
 # Sourcing Functions for Running Model With Threshold Based Triggers
-source("trigger_running_function.R")
 setwd("5_Suppression_Triggering_and_Exploration/")
+source("Functions/Trigger_Running_Functions.R")
 income_strata_healthcare_capacity <- squire::income_strata_healthcare_capacity
 
 # Trigger Thresholds to Use During Model Running
@@ -21,7 +21,7 @@ UMIC_icu <- (ICU[3] * 50000000 /1000) / 2
 HIC_icu <- (ICU[4] * 50000000 /1000) / 2
 
 # Defining Parameters Used in All Model Runs
-replicates <- 20
+replicates <- 30
 R0 <- c(3, 3)
 tt_R0 <- c(0, 50)
 suppression_reduction <- 0.25
@@ -89,7 +89,7 @@ saveRDS(capacity_vs_time, "capacity_vs_time.rds")
 income_strata <- c("LIC", "LIC", "LMIC", "LMIC", "UMIC", "HIC")
 poorer_outcomes <- c(TRUE, FALSE, TRUE, FALSE, FALSE, FALSE)
 countries <- c("Madagascar", "Madagascar", "Nicaragua", "Nicaragua", "Grenada", "Malta")
-raw_death_triggers <- c(0, 0, 0.00243, 0.00243, 0.0553, 0.157)
+raw_death_triggers <- c(0, 0, 0, 0, 0.044, 0.202)
 death_triggers <- round(50 * raw_death_triggers)
 b_max_ICU_req <- matrix(nrow = 6, ncol = length(trigger_thresholds))
 b_time_in_lockdown <- matrix(nrow = 6, ncol = length(trigger_thresholds))

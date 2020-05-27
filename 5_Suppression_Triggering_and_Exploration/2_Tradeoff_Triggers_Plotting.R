@@ -217,7 +217,7 @@ g <- ggplot(LMIC, aes(x = time, y = median)) +
 
 # Running for UMIC
 income_strata <- "UMIC"
-trigger_threshold <- 105
+trigger_threshold <- 103
 country <- "Grenada"
 raw_death_trigger <- 0.044
 death_triggers <- round(50 * raw_death_trigger)

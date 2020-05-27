@@ -195,9 +195,10 @@ unmit_inf$scenario <- "Unmitigated Unlimited Healthcare"
 raw_unmit_true <- run_explicit_SEEIR_model(country = "India",
                                        population = std_population,
                                        contact_matrix_set = contact_matrix,
-                                       hosp_bed_capacity = income_strata_healthcare_capacity$hosp_beds[2] * sum(std_population) / 1000,
-                                       ICU_bed_capacity = income_strata_healthcare_capacity$ICU_beds[2] * sum(std_population) / 1000,
-                                       R0 = 3, replicates = 50)
+                                       hosp_bed_capacity = 1000000000000,
+                                       ICU_bed_capacity = 1000000000000,
+                                       R0 = 3, replicates = 50,
+                                       prob_non_severe_death_treatment = c(rep(0.25, 16), 0.5804312))
 unmit_true <- format_output(raw_unmit_true, var_select = "deaths") %>%
   mutate(t = factor(t)) %>%
   group_by(t) %>%
