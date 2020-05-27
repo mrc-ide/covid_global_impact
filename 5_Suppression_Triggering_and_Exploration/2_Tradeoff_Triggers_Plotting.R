@@ -9,7 +9,7 @@ source("Functions/Trigger_Running_Functions.R")
 set.seed(100001)
 
 # Defining Parameters Used in All Model Runs
-replicates <- 20
+replicates <- 50
 R0 <- c(3, 3)
 tt_R0 <- c(0, 50)
 suppression_reduction <- 0.25
@@ -336,4 +336,4 @@ layout <- "AAABBB
 figure <- a + b + c + d + e + f + g + h + i +
   plot_layout(design = layout)
 figure 
-
+# width = 12, height = 9 
