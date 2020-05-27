@@ -1,40 +1,70 @@
 
+library(odin)
+library(dde)
 library(devtools)
-install.packages("viridis")
-install.packages("Rcolorbrewer")
-
-devtools::install_github("mrc-ide/squire",ref="non_odin_triggering")
 library(readxl)
 library(lubridate)
 library(dplyr)
 library(tidyverse);
 library(ggplot2);
 library(squire)
-
 library(ggthemes)
 rm(list=ls())
-setwd("C:/Users/Patrick/Imperial College London/ncov - Documents/2019-nCoV/LMIC/LMIC Parameters")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 severity_param_sets <- readRDS("severity_param_sets.rds")
 severity_param_sets_lmic <- readRDS("severity_param_sets_lmic.rds")
-load("income_strata_healthcare_capacity.rda")
+
 
 ndraws=500
 parameter_list<-severity_param_sets[1:ndraws]
 parameter_list_lmic<-severity_param_sets_lmic[1:ndraws]
 
-
-severity_param_sets_lmic[[1]]$prob_non_severe_death_treatment
-severity_param_sets[[1]]$prob_non_severe_death_treatment
-
-
-severity_param_sets_lmic[[1]]$prob_non_severe_death_treatment
-severity_param_sets_lmic[[1]]$prob_non_severe_death_no_treatment
-
-
-
-R0<-3
-dt<-0.1
+###### FUNCTIONS TO GET SEVERITY DRAWS ###############################
 sensitivity_runs_var_select <- function(params) {
+  # initial run
+  r <- suppressWarnings(do.call(run_explicit_SEEIR_model, params[[1]]))
+  t <- seq(from = 1, to = r$parameters$time_period / r$parameters$dt)
+  
+  #### use the following to work out locations of the vars you want
+  index <- squire:::odin_index(r$model)
+  
+  #### this will get the indices for the infections, deaths, cumulative deaths.
+  #### you must have t and time here
+  to_keep <- c(index$t, index$time,index$IMVGetLive1,index$IMVGetLive2,index$IMVGetDie1,index$IMVGetDie2)
+ 
+  # assign to our results
+  out <- list()
+  out[[1]] <- r
+  out[[1]]$output <- out[[1]]$output[,to_keep,, drop=FALSE]
+  
+  # running and storing the model output for each of the different initial seeding cases
+  for(i in 2:length(params)) {
+    message(paste(i," "), appendLF = "FALSE")
+    suppressWarnings(do.call(r$model$set_user, params[[i]]))
+    beta <- beta_est_explicit(dur_IMild = r$parameters$dur_IMild,
+                              dur_ICase = r$parameters$dur_ICase,
+                              prob_hosp = params[[i]]$prob_hosp,
+                              mixing_matrix =  squire:::process_contact_matrix_scaled_age(r$parameters$contact_matrix_set[[1]], params[[i]]$population),
+                              R0 = params[[i]]$R0
+    )
+    r$model$set_user(beta_set = beta)
+    r$output <- r$model$run(t, replicate = 1)
+    out[[i]] <- r
+    out[[i]]$output <- out[[i]]$output[,to_keep, , drop=FALSE]
+  }
+  
+  outarray <- array(NA, dim = c(nrow(out[[1]]$output), ncol(out[[1]]$output), length(params)))
+  for(i in 1:length(out)){
+    outarray[,,i] <- out[[i]]$output
+  }
+  colnames(outarray) <- names(out[[1]]$output[1,,1])
+  r$output <- outarray
+  
+  return(r)
+  
+}
+
+sensitivity_runs_var_select_inf_death <- function(params) {
   # initial run
   r <- suppressWarnings(do.call(run_explicit_SEEIR_model, params[[1]]))
   t <- seq(from = 1, to = r$parameters$time_period / r$parameters$dt)
@@ -234,6 +264,13 @@ format_output_new <- function(x, var_select = NULL, reduce_age = TRUE,
   
   return(out)
 }
+##### END OF FUNCTIONS TO RUN AND PROCESS SEVERITY DRAWS ################
+
+##### COMPILE PARAMETER SETS
+
+
+R0<-3
+dt<-0.1
 
 params_LIC_mit_FC  <- lapply(parameter_list, function(x) {
   x <- tail(as.list(x), -2)
@@ -254,6 +291,242 @@ params_LIC_mit_FC  <- lapply(parameter_list, function(x) {
   return(x)
 })
 
+params_LIC_unmit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Madagascar"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population )*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- R0
+  x$dt<-dt
+  return(x)
+})
+
+params_LMIC_mit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Nicaragua"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population)*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- 0.55*R0
+  x$dt<-dt
+  return(x)
+})
+
+params_LMIC_unmit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Nicaragua"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population)*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- R0
+  x$dt<-dt
+  return(x)
+})
+
+params_UMIC_mit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Grenada"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population )*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- 0.55*R0
+  x$dt<-dt
+  return(x)
+})
+
+params_UMIC_unmit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Grenada"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population )*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- R0
+  x$dt<-dt
+  return(x)
+})
+
+
+params_HIC_mit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Malta"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population )*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- 0.55*R0
+  x$dt<-dt
+  return(x)
+})
+
+
+params_HIC_unmit_FC  <- lapply(parameter_list, function(x) {
+  x <- tail(as.list(x), -2)
+  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
+                "prob_severe_death_treatment","prob_severe_death_no_treatment",
+                "prob_non_severe_death_no_treatment")
+  x$prob_severe<-x$prob_severe/x$prob_hosp
+  x$replicates <- 1
+  # add in any other parameters you want here
+  x$country <- "Malta"
+  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
+  x$population <- squire::get_population(x$country)$n
+  x$population <-x$population /sum(x$population )*1000000
+  x$hosp_bed_capacity<-sum(x$population)
+  x$ICU_bed_capacity<-sum(x$population)
+  x$R0 <- R0
+  x$dt<-dt
+  return(x)
+})
+
+
+#### RUN SIMULATIONS ASSUMING UNLIMITED SUPPLY#########################################
+LIC_mit_FC<- sensitivity_runs_var_select(params_LIC_mit_FC)
+LIC_unmit_FC<- sensitivity_runs_var_select(params_LIC_unmit_FC)
+LIC_mit_FC$parameters$replicates=ndraws
+LIC_unmit_FC$parameters$replicates=ndraws
+
+LMIC_mit_FC<- sensitivity_runs_var_select(params_LMIC_mit_FC)
+LMIC_unmit_FC<- sensitivity_runs_var_select(params_LMIC_unmit_FC)
+LMIC_mit_FC$parameters$replicates=ndraws
+LMIC_unmit_FC$parameters$replicates=ndraws
+
+UMIC_mit_FC<- sensitivity_runs_var_select(params_UMIC_mit_FC)
+UMIC_unmit_FC<- sensitivity_runs_var_select(params_UMIC_unmit_FC)
+UMIC_mit_FC$parameters$replicates=ndraws
+UMIC_unmit_FC$parameters$replicates=ndraws
+
+HIC_mit_FC<- sensitivity_runs_var_select(params_HIC_mit_FC)
+HIC_unmit_FC<- sensitivity_runs_var_select(params_HIC_unmit_FC)
+HIC_mit_FC$parameters$replicates=ndraws
+HIC_unmit_FC$parameters$replicates=ndraws
+
+
+HIC_mit_FC_out <- format_output_new(HIC_mit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+HIC_mit_FC_out <- HIC_mit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+HIC_unmit_FC_out <- format_output_new(HIC_unmit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+HIC_unmit_FC_out <- HIC_unmit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+LIC_mit_FC_out <- format_output_new(LIC_mit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+LIC_mit_FC_out <- LIC_mit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+LIC_unmit_FC_out <- format_output_new(LIC_unmit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+LIC_unmit_FC_out <- LIC_unmit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+LMIC_mit_FC_out <- format_output_new(LMIC_mit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+LMIC_mit_FC_out <- LMIC_mit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+LMIC_unmit_FC_out <- format_output_new(LMIC_unmit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+LMIC_unmit_FC_out <- LMIC_unmit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+UMIC_mit_FC_out <- format_output_new(UMIC_mit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+UMIC_mit_FC_out <- UMIC_mit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+UMIC_unmit_FC_out <- format_output_new(UMIC_unmit_FC, var_select = c("ICU_occupancy"), date_0 = Sys.Date())
+UMIC_unmit_FC_out <- UMIC_unmit_FC_out %>%
+  mutate(replicate = factor(replicate))
+
+
+##### PROCESS DEMAND VS SUPPLY DATAFRAME  ##############
+HIC_unmit<-data.frame("Income"="HIC","strat"="Unmitigated",
+                    "demand"=sapply(1:ndraws,function(z){max(HIC_unmit_FC_out$y[HIC_unmit_FC_out$replicate==z])}),
+                    "supply"=income_strata_healthcare_capacity$ICU_beds[4]*1000
+)
+
+HIC_mit<-data.frame("Income"="HIC","strat"="Mitigated",
+                    "demand"=sapply(1:ndraws,function(z){max(HIC_mit_FC_out$y[HIC_mit_FC_out$replicate==z])}),
+                    "supply"=income_strata_healthcare_capacity$ICU_beds[4]*1000
+)
+
+LIC_unmit<-data.frame("Income"="LIC","strat"="Unmitigated",
+                      "demand"=sapply(1:ndraws,function(z){max(LIC_unmit_FC_out$y[LIC_unmit_FC_out$replicate==z])}),
+                      "supply"=income_strata_healthcare_capacity$ICU_beds[1]*1000
+)
+
+LIC_mit<-data.frame("Income"="LIC","strat"="Mitigated",
+                    "demand"=sapply(1:ndraws,function(z){max(LIC_mit_FC_out$y[LIC_mit_FC_out$replicate==z])}),
+                    "supply"=income_strata_healthcare_capacity$ICU_beds[1]*1000
+)
+
+LMIC_unmit<-data.frame("Income"="LMIC","strat"="Unmitigated",
+                      "demand"=sapply(1:ndraws,function(z){max(LMIC_unmit_FC_out$y[LMIC_unmit_FC_out$replicate==z])}),
+                      "supply"=income_strata_healthcare_capacity$ICU_beds[2]*1000
+)
+
+LMIC_mit<-data.frame("Income"="LMIC","strat"="Mitigated",
+                    "demand"=sapply(1:ndraws,function(z){max(LMIC_mit_FC_out$y[LMIC_mit_FC_out$replicate==z])}),
+                    "supply"=income_strata_healthcare_capacity$ICU_beds[2]*1000
+)
+
+UMIC_unmit<-data.frame("Income"="UMIC","strat"="Unmitigated",
+                       "demand"=sapply(1:ndraws,function(z){max(UMIC_unmit_FC_out$y[UMIC_unmit_FC_out$replicate==z])}),
+                       "supply"=income_strata_healthcare_capacity$ICU_beds[3]*1000
+)
+
+UMIC_mit<-data.frame("Income"="UMIC","strat"="Mitigated",
+                     "demand"=sapply(1:ndraws,function(z){max(UMIC_mit_FC_out$y[UMIC_mit_FC_out$replicate==z])}),
+                     "supply"=income_strata_healthcare_capacity$ICU_beds[3]*1000
+)
+all<-rbind(LIC_unmit,LIC_mit,LMIC_unmit,LMIC_mit,UMIC_unmit,UMIC_mit,HIC_unmit,HIC_mit)
+write.csv(all,"HC_stretch_uncertainty.csv",row.names=F)
+
+
+#### GET PARAMETERS WITH LOWER SUPPLY AND QUALITY OF HEALTH CARE
 params_LIC_mit_TC  <- lapply(parameter_list, function(x) {
   x <- tail(as.list(x), -2)
   names(x) <- c("prob_hosp", "prob_severe",
@@ -296,24 +569,6 @@ params_LIC_mit_TC_po  <- lapply(parameter_list_lmic, function(x) {
   return(x)
 })
 
-params_LMIC_mit_FC  <- lapply(parameter_list, function(x) {
-  x <- tail(as.list(x), -2)
-  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
-                "prob_severe_death_treatment","prob_severe_death_no_treatment",
-                "prob_non_severe_death_no_treatment")
-  x$prob_severe<-x$prob_severe/x$prob_hosp
-  x$replicates <- 1
-  # add in any other parameters you want here
-  x$country <- "Nicaragua"
-  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
-  x$population <- squire::get_population(x$country)$n
-  x$population <-x$population /sum(x$population)*1000000
-  x$hosp_bed_capacity<-sum(x$population)
-  x$ICU_bed_capacity<-sum(x$population)
-  x$R0 <- 0.55*R0
-  x$dt<-dt
-  return(x)
-})
 
 params_LMIC_mit_TC  <- lapply(parameter_list, function(x) {
   x <- tail(as.list(x), -2)
@@ -357,24 +612,6 @@ params_LMIC_mit_TC_po  <- lapply(parameter_list_lmic, function(x) {
 })
 
 
-params_UMIC_mit_FC  <- lapply(parameter_list, function(x) {
-  x <- tail(as.list(x), -2)
-  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
-                "prob_severe_death_treatment","prob_severe_death_no_treatment",
-                "prob_non_severe_death_no_treatment")
-  x$prob_severe<-x$prob_severe/x$prob_hosp
-  x$replicates <- 1
-  # add in any other parameters you want here
-  x$country <- "Grenada"
-  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
-  x$population <- squire::get_population(x$country)$n
-  x$population <-x$population /sum(x$population )*1000000
-  x$hosp_bed_capacity<-sum(x$population)
-  x$ICU_bed_capacity<-sum(x$population)
-  x$R0 <- 0.55*R0
-  x$dt<-dt
-  return(x)
-})
 
 params_UMIC_mit_TC  <- lapply(parameter_list, function(x) {
   x <- tail(as.list(x), -2)
@@ -393,25 +630,6 @@ params_UMIC_mit_TC  <- lapply(parameter_list, function(x) {
   x$hosp_bed_capacity<-income_strata_healthcare_capacity$hosp_beds[3]*1000
   x$ICU_bed_capacity<-income_strata_healthcare_capacity$ICU_beds[3]*1000
   x$R0 <- R0*0.55
-  x$dt<-dt
-  return(x)
-})
-
-params_HIC_mit_FC  <- lapply(parameter_list, function(x) {
-  x <- tail(as.list(x), -2)
-  names(x) <- c("prob_hosp", "prob_severe", "prob_non_severe_death_treatment",
-                "prob_severe_death_treatment","prob_severe_death_no_treatment",
-                "prob_non_severe_death_no_treatment")
-  x$prob_severe<-x$prob_severe/x$prob_hosp
-  x$replicates <- 1
-  # add in any other parameters you want here
-  x$country <- "Malta"
-  x$contact_matrix_set=squire::get_mixing_matrix(x$country)
-  x$population <- squire::get_population(x$country)$n
-  x$population <-x$population /sum(x$population )*1000000
-  x$hosp_bed_capacity<-sum(x$population)
-  x$ICU_bed_capacity<-sum(x$population)
-  x$R0 <- 0.55*R0
   x$dt<-dt
   return(x)
 })
@@ -436,35 +654,44 @@ params_HIC_mit_TC  <- lapply(parameter_list, function(x) {
   return(x)
 })
 
+### RUN TO GET INFECTIONS AND DEATHS #############
 
-LIC_mit_FC<- sensitivity_runs_var_select(params_LIC_mit_FC)
-LIC_mit_TC<- sensitivity_runs_var_select(params_LIC_mit_TC)
-LIC_mit_TC_po<- sensitivity_runs_var_select(params_LIC_mit_TC_po)
+LIC_mit_FC<- sensitivity_runs_var_select_inf_death(params_LIC_mit_FC)
 LIC_mit_FC$parameters$replicates=ndraws
+
+
+LMIC_mit_FC<- sensitivity_runs_var_select_inf_death(params_LMIC_mit_FC)
+LMIC_mit_FC$parameters$replicates=ndraws
+
+
+UMIC_mit_FC<- sensitivity_runs_var_select_inf_death(params_UMIC_mit_FC)
+UMIC_mit_FC$parameters$replicates=ndraws
+
+
+HIC_mit_FC<- sensitivity_runs_var_select_inf_death(params_HIC_mit_FC)
+HIC_mit_FC$parameters$replicates=ndraws
+
+
+
+LIC_mit_TC<- sensitivity_runs_var_select_inf_death(params_LIC_mit_TC)
+LIC_mit_TC_po<- sensitivity_runs_var_select_inf_death(params_LIC_mit_TC_po)
 LIC_mit_TC$parameters$replicates=ndraws
 LIC_mit_TC_po$parameters$replicates=ndraws
 
 
-LMIC_mit_FC<- sensitivity_runs_var_select(params_LMIC_mit_FC)
-LMIC_mit_TC<- sensitivity_runs_var_select(params_LMIC_mit_TC)
-LMIC_mit_TC_po<- sensitivity_runs_var_select(params_LMIC_mit_TC_po)
-LMIC_mit_FC$parameters$replicates=ndraws
+LMIC_mit_TC<- sensitivity_runs_var_select_inf_death(params_LMIC_mit_TC)
+LMIC_mit_TC_po<- sensitivity_runs_var_select_inf_death(params_LMIC_mit_TC_po)
 LMIC_mit_TC$parameters$replicates=ndraws
 LMIC_mit_TC_po$parameters$replicates=ndraws
 
-LMIC_mit_FC$parameters
-LMIC_mit_TC$parameters
-
-UMIC_mit_FC<- sensitivity_runs_var_select(params_UMIC_mit_FC)
-UMIC_mit_TC<- sensitivity_runs_var_select(params_UMIC_mit_TC)
-UMIC_mit_FC$parameters$replicates=ndraws
+UMIC_mit_TC<- sensitivity_runs_var_select_inf_death(params_UMIC_mit_TC)
 UMIC_mit_TC$parameters$replicates=ndraws
 
-HIC_mit_FC<- sensitivity_runs_var_select(params_HIC_mit_FC)
-HIC_mit_TC<- sensitivity_runs_var_select(params_HIC_mit_TC)
-HIC_mit_FC$parameters$replicates=ndraws
+HIC_mit_TC<- sensitivity_runs_var_select_inf_death(params_HIC_mit_TC)
 HIC_mit_TC$parameters$replicates=ndraws
 
+
+#####FORMAT OUTPUT #########################
 
 LIC_mit_FC_out <- format_output_new(LIC_mit_FC, var_select = c("deaths"), date_0 = Sys.Date())
 LIC_mit_FC_out <- LIC_mit_FC_out %>%
@@ -551,41 +778,42 @@ HIC_mit_TC_out_inf <- HIC_mit_TC_out_inf %>%
   mutate(replicate = factor(replicate))
 
 
+#####CONSTRUCT DATAFRAME #########################
 HIC_inf<-data.frame("Income"="HIC","HS"="Infinite capacity",
-               "IFR"=sapply(1:ndraws,function(z){sum(HIC_mit_FC_out$y[HIC_mit_FC_out$replicate==z])/sum(HIC_mit_FC_out_inf$y[HIC_mit_FC_out_inf$replicate==z])}),
-               "Mort"=sapply(1:ndraws,function(z){sum(HIC_mit_FC_out$y[HIC_mit_FC_out$replicate==z])})
-               )
-HIC_tc<-data.frame("Income"="HIC","HS"="true capacity",
+                    "IFR"=sapply(1:ndraws,function(z){sum(HIC_mit_FC_out$y[HIC_mit_FC_out$replicate==z])/sum(HIC_mit_FC_out_inf$y[HIC_mit_FC_out_inf$replicate==z])}),
+                    "Mort"=sapply(1:ndraws,function(z){sum(HIC_mit_FC_out$y[HIC_mit_FC_out$replicate==z])})
+)
+HIC_tc<-data.frame("Income"="HIC","HS"="True capacity",
                    "IFR"=sapply(1:ndraws,function(z){sum(HIC_mit_TC_out$y[HIC_mit_TC_out$replicate==z])/sum(HIC_mit_TC_out_inf$y[HIC_mit_TC_out_inf$replicate==z])}),
                    "Mort"=sapply(1:ndraws,function(z){sum(HIC_mit_TC_out$y[HIC_mit_TC_out$replicate==z])})
 )
 
 
 UMIC_inf<-data.frame("Income"="UMIC","HS"="Infinite capacity",
-                    "IFR"=sapply(1:ndraws,function(z){sum(UMIC_mit_FC_out$y[UMIC_mit_FC_out$replicate==z])/sum(UMIC_mit_FC_out_inf$y[UMIC_mit_FC_out_inf$replicate==z])}),
-                    "Mort"=sapply(1:ndraws,function(z){sum(UMIC_mit_FC_out$y[UMIC_mit_FC_out$replicate==z])})
+                     "IFR"=sapply(1:ndraws,function(z){sum(UMIC_mit_FC_out$y[UMIC_mit_FC_out$replicate==z])/sum(UMIC_mit_FC_out_inf$y[UMIC_mit_FC_out_inf$replicate==z])}),
+                     "Mort"=sapply(1:ndraws,function(z){sum(UMIC_mit_FC_out$y[UMIC_mit_FC_out$replicate==z])})
 )
-UMIC_tc<-data.frame("Income"="UMIC","HS"="true capacity",
-                   "IFR"=sapply(1:ndraws,function(z){sum(UMIC_mit_TC_out$y[UMIC_mit_TC_out$replicate==z])/sum(UMIC_mit_TC_out_inf$y[UMIC_mit_TC_out_inf$replicate==z])}),
-                   "Mort"=sapply(1:ndraws,function(z){sum(UMIC_mit_TC_out$y[UMIC_mit_TC_out$replicate==z])})
+UMIC_tc<-data.frame("Income"="UMIC","HS"="True capacity",
+                    "IFR"=sapply(1:ndraws,function(z){sum(UMIC_mit_TC_out$y[UMIC_mit_TC_out$replicate==z])/sum(UMIC_mit_TC_out_inf$y[UMIC_mit_TC_out_inf$replicate==z])}),
+                    "Mort"=sapply(1:ndraws,function(z){sum(UMIC_mit_TC_out$y[UMIC_mit_TC_out$replicate==z])})
 )
 
 LMIC_inf<-data.frame("Income"="LMIC","HS"="Infinite capacity",
                      "IFR"=sapply(1:ndraws,function(z){sum(LMIC_mit_FC_out$y[LMIC_mit_FC_out$replicate==z])/sum(LMIC_mit_FC_out_inf$y[LMIC_mit_FC_out_inf$replicate==z])}),
                      "Mort"=sapply(1:ndraws,function(z){sum(LMIC_mit_FC_out$y[LMIC_mit_FC_out$replicate==z])})
 )
-LMIC_tc<-data.frame("Income"="LMIC","HS"="true capacity",
+LMIC_tc<-data.frame("Income"="LMIC","HS"="True capacity",
                     "IFR"=sapply(1:ndraws,function(z){sum(LMIC_mit_TC_out$y[LMIC_mit_TC_out$replicate==z])/sum(LMIC_mit_TC_out_inf$y[LMIC_mit_TC_out_inf$replicate==z])}),
                     "Mort"=sapply(1:ndraws,function(z){sum(LMIC_mit_TC_out$y[LMIC_mit_TC_out$replicate==z])})
 )
 
 LIC_inf<-data.frame("Income"="LIC","HS"="Infinite capacity",
-                     "IFR"=sapply(1:ndraws,function(z){sum(LIC_mit_FC_out$y[LIC_mit_FC_out$replicate==z])/sum(LIC_mit_FC_out_inf$y[LIC_mit_FC_out_inf$replicate==z])}),
-                     "Mort"=sapply(1:ndraws,function(z){sum(LIC_mit_FC_out$y[LIC_mit_FC_out$replicate==z])})
+                    "IFR"=sapply(1:ndraws,function(z){sum(LIC_mit_FC_out$y[LIC_mit_FC_out$replicate==z])/sum(LIC_mit_FC_out_inf$y[LIC_mit_FC_out_inf$replicate==z])}),
+                    "Mort"=sapply(1:ndraws,function(z){sum(LIC_mit_FC_out$y[LIC_mit_FC_out$replicate==z])})
 )
-LIC_tc<-data.frame("Income"="LIC","HS"="true capacity",
-                    "IFR"=sapply(1:ndraws,function(z){sum(LIC_mit_TC_out$y[LIC_mit_TC_out$replicate==z])/sum(LIC_mit_TC_out_inf$y[LIC_mit_TC_out_inf$replicate==z])}),
-                    "Mort"=sapply(1:ndraws,function(z){sum(LIC_mit_TC_out$y[LIC_mit_TC_out$replicate==z])})
+LIC_tc<-data.frame("Income"="LIC","HS"="True capacity",
+                   "IFR"=sapply(1:ndraws,function(z){sum(LIC_mit_TC_out$y[LIC_mit_TC_out$replicate==z])/sum(LIC_mit_TC_out_inf$y[LIC_mit_TC_out_inf$replicate==z])}),
+                   "Mort"=sapply(1:ndraws,function(z){sum(LIC_mit_TC_out$y[LIC_mit_TC_out$replicate==z])})
 )
 
 LIC_po<-data.frame("Income"="LIC","HS"="Poor outcomes",
@@ -594,93 +822,20 @@ LIC_po<-data.frame("Income"="LIC","HS"="Poor outcomes",
 )
 
 LMIC_po<-data.frame("Income"="LMIC","HS"="Poor outcomes",
-                   "IFR"=sapply(1:ndraws,function(z){sum(LMIC_mit_TC_po_out$y[LMIC_mit_TC_po_out$replicate==z])/sum(LMIC_mit_TC_po_out_inf$y[LMIC_mit_TC_po_out_inf$replicate==z])}),
-                   "Mort"=sapply(1:ndraws,function(z){sum(LMIC_mit_TC_po_out$y[LMIC_mit_TC_po_out$replicate==z])})
+                    "IFR"=sapply(1:ndraws,function(z){sum(LMIC_mit_TC_po_out$y[LMIC_mit_TC_po_out$replicate==z])/sum(LMIC_mit_TC_po_out_inf$y[LMIC_mit_TC_po_out_inf$replicate==z])}),
+                    "Mort"=sapply(1:ndraws,function(z){sum(LMIC_mit_TC_po_out$y[LMIC_mit_TC_po_out$replicate==z])})
 )
 
 all<-rbind(HIC_inf,UMIC_inf,LMIC_inf,LIC_inf,HIC_tc,UMIC_tc,LMIC_tc,LIC_tc,LMIC_po,LIC_po)
 all$Income<-factor(all$Income,
-                            levels = c("LIC","LMIC","UMIC","HIC"))
-
-all$HS<-factor(all$HS,
-                   levels = c("Infinite capacity","true capacity","Poor outcomes"))
-
-
-write.csv(all,"IFR_mortality_uncertainty.csv",row.names=F)
-check<-read.csv("IFR_mortality_uncertainty.csv")
-check$Income<-factor(all$Income,
                    levels = c("LIC","LMIC","UMIC","HIC"))
 
-check$HS<-factor(all$HS,
-               levels = c("Infinite capacity","true capacity","Poor outcomes"))
-
-g <- ggplot(check, aes(Income, IFR))
-g + geom_boxplot(aes(fill=factor(HS))) +
-  theme(axis.text.x = element_text(angle=65, vjust=0.6))
+all$HS<-factor(all$HS,
+               levels = c("Infinite capacity","True capacity","Poor outcomes"))
 
 g <- ggplot(all, aes(Income, Mort))
 g + geom_boxplot(aes(fill=factor(HS))) +
   theme(axis.text.x = element_text(angle=65, vjust=0.6))
 
-
-
-mpg
-
-g <- ggplot(mpg, aes(class, cty))
-g + geom_boxplot(aes(fill=factor(cyl))) + 
-  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
-  labs(title="Box plot", 
-       subtitle="City Mileage grouped by Class of vehicle",
-       caption="Source: mpg",
-       x="Class of Vehicle",
-       y="City Mileage")
-
-unmit<-run_explicit_SEEIR_model(country="India",R0=3,hosp_bed_capacity=1000000000000,ICU_bed_capacity = 100000000000000000000,dt=0.01)
-
-out<-format_output(unmit, var_select = "deaths")
-out_inf<-format_output(unmit, var_select = "infections")
-sum(out$y)/sum(out_inf$y)
-
-plot(r,var_select = "deaths")
-
-
-?run_explicit_SEEIR_model
-# Get the mixing matrix
-pop <- get_population("India")
-std_population <- pop$n/sum(pop$n)*100000000
-contact_matrix <- get_mixing_matrix("India")
-
-no_action<-run_explicit_SEEIR_model(country="India",
-  tt_contact_matrix = c(0,30,210),
-contact_matrix_set = list(contact_matrix,
-                          contact_matrix*0.55,contact_matrix),
-population = std_population)
-
-  t1 <- calibrate(country = "India",
-                  population<-std_population,
-                  contact_matrix_set=contact_matrix,
-                  hosp_bed_capacity=1000000000000,
-                  ICU_bed_capacity = 100000000000000000000,
-                  deaths = 10,
-                  reporting_fraction = 1,
-                  dt = 0.1,
-                  time_period = 400,
-                  replicates=50,
-                  R0=3)
-
-  p2 <- projections(r = t1, R0_change = c(0.55, 1), tt_R0 = c(0, 180))
-  p3 <- projections(r = t1, R0_change = c(0.25, 1), tt_R0 = c(0, 180))
-  p4 <- projections(r = t1, R0_change = c(0.8, 1), tt_R0 = c(0, 180))
-  
-projection_plotting(r_list = list(t1,p2,p3,p4),
-                    scenarios = c("Unmitigated","Mitigation","Supp_lift","no_action"),
-                    var_select = c("deaths"),
-                    add_parms_to_scenarios = FALSE,
-                    ci = TRUE,summarise = TRUE)
-
-  R0 = 2.5,
-time_period = 400,
-dt = 0.1,
-replicates = 5
-)
+write.csv(all,"IFR_mortality_uncertainty.csv",row.names=F)
 
