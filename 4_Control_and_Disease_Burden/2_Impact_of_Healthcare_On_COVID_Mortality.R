@@ -9,7 +9,7 @@ setwd("4_Control_and_Disease_Burden/")
 income_strata_healthcare_capacity <- income_strata_healthcare_capacity
 
 # Plotting Supply vs Demand for Each Income Strata
-HC_stretch <- read.csv("HC_stretch_uncertainty.csv") %>%
+HC_stretch <- read.csv("Outputs/HC_stretch_uncertainty.csv") %>%
   mutate(Income = factor(Income, levels = c("LIC","LMIC","UMIC","HIC"))) %>%
   mutate(strat = factor(strat, levels = c("Unmitigated","Mitigated")))
 
@@ -34,9 +34,9 @@ HS_stretch_plot <- ggplot(HC_stretch, aes(Income, demand/supply,
 
 
 # Plotting IFR for Each Income Strata 
-IFR_mort <- read.csv("IFR_mortality_uncertainty.csv") %>%
+IFR_mort <- read.csv("Outputs/IFR_mortality_uncertainty.csv") %>%
   mutate(Income = factor(Income, levels = c("LIC","LMIC","UMIC","HIC"))) %>%
-  mutate(HS = factor(HS, levels = c("Infinite capacity","true capacity","Poor outcomes")))
+  mutate(HS = factor(HS, levels = c("Infinite capacity","True capacity","Poor outcomes")))
 IFR_plot <- ggplot(IFR_mort, aes(Income, IFR, 
                                  col = interaction(Income, HS))) +
   geom_boxplot(position = position_dodge2(preserve = "single",
@@ -67,10 +67,24 @@ mort_plot <- ggplot(IFR_mort, aes(Income, Mort,
 x <- HS_stretch_plot + IFR_plot + mort_plot
 x
 
+# Summarising Deaths
+bloop <- IFR_mort %>%
+  filter(Income == "LMIC") %>%
+  group_by(HS) %>%
+  summarise(median = median(Mort),
+            mean = mean(Mort))
+
+# Summarising IFR
+bloop <- IFR_mort %>%
+  group_by(Income, HS) %>%
+  summarise(median = 100 * median(IFR),
+            mean = 100 * mean(IFR))
+
 # Running the Epidemic Trajectory Plots Tracking Deaths Over Time, Unlimited Healthcare Capacity
-pop <- get_population("India")
-std_population <- pop$n/sum(pop$n) * 100000000
-contact_matrix <- get_mixing_matrix("India")
+pop <- get_population("Nicaragua")
+millions <- 1
+std_population <- pop$n/sum(pop$n) * 1000000 * millions
+contact_matrix <- get_mixing_matrix("Nicaragua")
 t1 <- align(country = "India",
             population = std_population,
             contact_matrix_set = contact_matrix,
@@ -131,7 +145,7 @@ epidem <- ggplot(overall, aes(x = t, y = median, col = scenario)) +
 
 # Running the Epidemic Trajectory Plots Tracking Deaths Over Time, Examining Deaths Due to Healthcare Capacity Being Exceeded
 ## mitigated, unlimited healthcare
-raw_mit_inf <- run_explicit_SEEIR_model(country = "India",
+raw_mit_inf <- run_explicit_SEEIR_model(country = "Nicaragua",
                                         population = std_population,
                                         contact_matrix_set = contact_matrix,
                                         hosp_bed_capacity = 1000000000000,
@@ -144,9 +158,16 @@ mit_inf <- format_output(raw_mit_inf, var_select = "deaths") %>%
 mit_inf$median <- rollapply(mit_inf$median, 10, sum, partial = TRUE, align = "right")
 mit_inf$t <- seq(0.1, length(mit_inf$t)/10, 0.1)
 mit_inf$scenario <- "Mitigated Unlimited Healthcare"
+mit_inf_total_deaths <- sum(mit_inf$median[seq(1, length(mit_inf$t), 10)])
+mit_inf_infections <- format_output(raw_mit_inf, var_select = "infections") %>%
+  mutate(t = factor(t)) %>%
+  group_by(t) %>%
+  summarise(median = median(y))
+inf_infections <- sum(mit_inf_infections$median)
+100 * mit_inf_total_deaths/inf_infections
 
 ## mitigated, limited healthcare
-raw_mit_true <- run_explicit_SEEIR_model(country = "India",
+raw_mit_true <- run_explicit_SEEIR_model(country = "Nicaragua",
                                          population = std_population,
                                          contact_matrix_set = contact_matrix,
                                          hosp_bed_capacity = income_strata_healthcare_capacity$hosp_beds[2] * sum(std_population)/ 1000,
@@ -159,9 +180,16 @@ mit_true <- format_output(raw_mit_true, var_select = "deaths") %>%
 mit_true$median <- rollapply(mit_true$median, 10, sum, partial = TRUE, align = "right")
 mit_true$t <- seq(0.1, length(mit_true$t)/10, 0.1)
 mit_true$scenario <- "Mitigated Limited Healthcare"
+mit_true_total_deaths <- sum(mit_true$median[seq(1, length(mit_true$t), 10)])
+mit_infections <- format_output(raw_mit_true, var_select = "infections") %>%
+  mutate(t = factor(t)) %>%
+  group_by(t) %>%
+  summarise(median = median(y))
+infections <- sum(mit_infections$median)
+100 * mit_true_total_deaths/infections
 
 ## mitigated, limited healthcare, poorer outcomes
-raw_mit_po <- run_explicit_SEEIR_model(country = "India",
+raw_mit_po <- run_explicit_SEEIR_model(country = "Nicaragua",
                                        population = std_population,
                                        contact_matrix_set = contact_matrix,
                                        hosp_bed_capacity = income_strata_healthcare_capacity$hosp_beds[2] * sum(std_population) / 1000,
@@ -175,9 +203,16 @@ mit_po <- format_output(raw_mit_po, var_select = "deaths") %>%
 mit_po$median <- rollapply(mit_po$median, 10, sum, partial = TRUE, align = "right")
 mit_po$t <- seq(0.1, length(mit_po$t)/10, 0.1)
 mit_po$scenario <- "Mitigated Poorer Outcomes"
+mit_po_total_deaths <- sum(mit_po$median[seq(1, length(mit_po$t), 10)])
+mit_po_infections <- format_output(raw_mit_po, var_select = "infections") %>%
+  mutate(t = factor(t)) %>%
+  group_by(t) %>%
+  summarise(median = median(y))
+infections <- sum(mit_po_infections$median)
+100 * mit_po_total_deaths/infections
 
 ## unmitigated, unlimited healthcare
-raw_unmit_inf <- run_explicit_SEEIR_model(country = "India",
+raw_unmit_inf <- run_explicit_SEEIR_model(country = "Nicaragua",
                                           population = std_population,
                                           contact_matrix_set = contact_matrix,
                                           hosp_bed_capacity = 1000000000000,
@@ -192,13 +227,12 @@ unmit_inf$t <- seq(0.1, length(unmit_inf$t)/10, 0.1)
 unmit_inf$scenario <- "Unmitigated Unlimited Healthcare"
 
 ## unmitigated, limited healthcare
-raw_unmit_true <- run_explicit_SEEIR_model(country = "India",
+raw_unmit_true <- run_explicit_SEEIR_model(country = "Nicaragua",
                                        population = std_population,
                                        contact_matrix_set = contact_matrix,
-                                       hosp_bed_capacity = 1000000000000,
-                                       ICU_bed_capacity = 1000000000000,
-                                       R0 = 3, replicates = 50,
-                                       prob_non_severe_death_treatment = c(rep(0.25, 16), 0.5804312))
+                                       hosp_bed_capacity = income_strata_healthcare_capacity$hosp_beds[2] * sum(std_population)/ 1000,
+                                       ICU_bed_capacity = income_strata_healthcare_capacity$ICU_beds[2] * sum(std_population)/ 1000,
+                                       R0 = 3, replicates = 50)
 unmit_true <- format_output(raw_unmit_true, var_select = "deaths") %>%
   mutate(t = factor(t)) %>%
   group_by(t) %>%
@@ -208,7 +242,7 @@ unmit_true$t <- seq(0.1, length(unmit_true$t)/10, 0.1)
 unmit_true$scenario <- "Unmitigated Limited Healthcare"
 
 ## unmitigated, limited healthcare
-raw_unmit_po <- run_explicit_SEEIR_model(country = "India",
+raw_unmit_po <- run_explicit_SEEIR_model(country = "Nicaragua",
                                          population = std_population,
                                          contact_matrix_set = contact_matrix,
                                          hosp_bed_capacity = income_strata_healthcare_capacity$hosp_beds[2] * sum(std_population) / 1000,
