@@ -103,7 +103,6 @@ for (i in 1:4) {
 mitigated_capacity_exceed <- data.frame(mitigated_capacity_exceed)
 colnames(mitigated_capacity_exceed) <- income_strata
 
-
 tidy_mit <- mitigated_capacity_exceed %>%
   gather(setting, multiple)
 tidy_mit$scenario <- "mitigated"

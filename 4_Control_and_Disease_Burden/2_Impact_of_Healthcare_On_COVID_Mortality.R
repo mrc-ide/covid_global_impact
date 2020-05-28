@@ -25,7 +25,7 @@ t1 <- align(country = "Nicaragua",
             reporting_fraction = 1,
             dt = 0.1,
             time_period = 400,
-            replicates = 50,
+            replicates = 100,
             R0 = 3,
             day_return = TRUE)
 t1_deaths <- format_output(t1, var_select = "deaths") %>%
@@ -181,7 +181,7 @@ epidem_pt_2 <- ggplot(overall_pt_2, aes(x = t, y = median/millions, col = scenar
   theme(legend.position = "none")
 
 # Plotting Supply vs Demand for Each Income Strata
-HC_stretch <- read.csv("Outputs/HC_stretch_uncertainty.rds") %>%
+HC_stretch <- readRDS("Outputs/HC_stretch_uncertainty.rds") %>%
   mutate(setting = factor(setting, levels = c("LIC", "LMIC", "UMIC", "HIC"))) %>%
   mutate(scenario = factor(scenario, levels = c("unmitigated", "mitigated")))
 
@@ -196,11 +196,11 @@ HS_stretch_plot <- ggplot(HC_stretch, aes(setting, multiple, col = interaction(s
 
 
 # Plotting IFR for Each Income Strata 
-IFR_mort <- read.csv("Outputs/IFR_mortality_uncertainty.csv") %>%
+IFR <- readRDS("Outputs/IFR_uncertainty.rds") %>%
   mutate(setting = factor(setting, levels = c("LIC", "LMIC", "UMIC", "HIC"))) %>%
-  mutate(scenario = factor(scenario, levels = c("unlimited", "limited", "poorer_outcomes")))
+  mutate(scenario = factor(scenario, levels = c("unlimited_healthcare", "limited_healthcare", "poorer_outcomes")))
 
-IFR_plot <- ggplot(IFR_mort, aes(setting, IFR, col = interaction(setting, scenario))) +
+IFR_plot <- ggplot(IFR, aes(setting, IFR, col = interaction(setting, scenario))) +
   geom_boxplot(position = position_dodge2(preserve = "single", padding = 0.25), size = 1, coef = 100) +
   scale_colour_manual(values = c("#78A069", "#78A069", "#78A069", "#78A069", 
                                  "#D9AC64", "#D9AC64", "#D9AC64", "#D9AC64", 
@@ -210,14 +210,18 @@ IFR_plot <- ggplot(IFR_mort, aes(setting, IFR, col = interaction(setting, scenar
   labs(x = "", y = "Infection Fatality Rate")
 
 # Plotting the Overall Mortality for Each Income Strata
-mort_plot <- ggplot(IFR_mort, aes(setting, IFR, col = interaction(setting, scenario))) +
+mort <- readRDS("Outputs/Mort_uncertainty.rds") %>%
+  mutate(setting = factor(setting, levels = c("LIC", "LMIC", "UMIC", "HIC"))) %>%
+  mutate(scenario = factor(scenario, levels = c("unlimited_healthcare", "limited_healthcare", "poorer_outcomes")))
+
+mort_plot <- ggplot(mort, aes(setting, mort, col = interaction(setting, scenario))) +
   geom_boxplot(position = position_dodge2(preserve = "single", padding = 0.25), size = 1, coef = 100) +
   scale_colour_manual(values = c("#78A069", "#78A069", "#78A069", "#78A069", 
                                  "#D9AC64", "#D9AC64", "#D9AC64", "#D9AC64", 
                                  "#E0785F", "#E0785F")) +
   theme_bw() +
   theme(legend.title = element_blank(), legend.position="none") +
-  labs(x = "", y = "Total Mortality (Deaths per Million") + 
+  labs(x = "", y = "Total Mortality (Deaths per Million)") + 
   guides(fill = guide_legend(ncol = 3, position = "bottom"))
 
 
