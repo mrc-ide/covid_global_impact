@@ -318,36 +318,111 @@ d <- ggplot(scen_df, aes(x = age_group, y = prob, fill = scenario)) +
 # Calculating IFRs for Each Country Under the Different Healthcare Quality Scenarios 
 countries <- c("Madagascar", "Nicaragua", "Grenada", "Malta") # representative of each income group
 raw_IFRs <- matrix(nrow = 4, ncol = 4)
-average_age <- matrix(nrow = 4, ncol = 4)
+
+# Unlimited Healthcare
 for (i in 1:4) {
-  x <- run_explicit_SEEIR_model(country = countries[i],
+  
+  mixing_matrix <- get_mixing_matrix(countries[i])
+  std_population <- generate_standard_population(countries[i])
+  
+  # Unlimited Capacity, Identical Quality Across All Settings
+  x <- run_explicit_SEEIR_model(R0 = 3,
+                                country = countries[i],
+                                contact_matrix_set = mixing_matrix,
+                                population = std_population,
                                 hosp_bed_capacity = 100000000,
                                 ICU_bed_capacity = 100000000,
                                 replicates = 20,
-                                dt = 0.1)
-  deaths <- format_output(x, var_select = "D", reduce_age = FALSE) %>%
-    group_by(age_group) %>%
-    filter(t == max(t)) %>%
-    summarise(final_deaths = median(y))
-  recovered <- format_output(x, var_select = "R", reduce_age = FALSE) %>%
-    group_by(age_group) %>%
-    filter(t == max(t)) %>%
-    summarise(final_recovered = median(y))
+                                dt = 0.1,
+                                day_return = TRUE)
+
+  output <- format_output(x, var_select = c("deaths", "infections")) %>%
+    mutate(t = factor(t)) %>%
+    group_by(compartment, replicate) %>%
+    summarise(total = sum(y)) %>%
+    group_by(compartment) %>%
+    summarise(median = median(total))
   
-  infected <- deaths$final_deaths + recovered$final_recovered
-  raw_IFRs[1, i] <- 100 * sum((infected * scen_1)/sum(infected))
-  raw_IFRs[2, i] <- 100 * sum((infected * scen_2)/sum(infected))
-  raw_IFRs[3, i] <- 100 * sum((infected * scen_3)/sum(infected))
-  raw_IFRs[4, i] <- 100 * sum((infected * scen_4)/sum(infected))
+  deaths <- output$median[output$compartment == "deaths"]
+  infections <- output$median[output$compartment == "infections"]
+  raw_IFRs[i, 1] <- 100 * deaths/infections
+  
+  # No ICU Capacity, Identical, High Quality Across All Settings
+  x <- run_explicit_SEEIR_model(R0 = 3,
+                                country = countries[i],
+                                contact_matrix_set = mixing_matrix,
+                                population = std_population,
+                                hosp_bed_capacity = 100000000,
+                                ICU_bed_capacity = 0,
+                                replicates = 20,
+                                dt = 0.1,
+                                day_return = TRUE)
+  
+  output <- format_output(x, var_select = c("deaths", "infections")) %>%
+    mutate(t = factor(t)) %>%
+    group_by(compartment, replicate) %>%
+    summarise(total = sum(y)) %>%
+    group_by(compartment) %>%
+    summarise(median = median(total))
+  
+  deaths <- output$median[output$compartment == "deaths"]
+  infections <- output$median[output$compartment == "infections"]
+  raw_IFRs[i, 2] <- 100 * deaths/infections
+  
+  # Limited ICU Capacity, Identical, Poorer General Hopsital Bed Care Quality 
+  # Across All Settings (Presented Only for LIC and LMIC Though)
+  x <- run_explicit_SEEIR_model(R0 = 3,
+                                country = countries[i],
+                                contact_matrix_set = mixing_matrix,
+                                population = std_population,
+                                hosp_bed_capacity = 100000000,
+                                ICU_bed_capacity = 0,
+                                replicates = 20,
+                                prob_non_severe_death_treatment = c(rep(0.25, 16), 0.5804312),
+                                dt = 0.1,
+                                day_return = TRUE)
+  
+  output <- format_output(x, var_select = c("deaths", "infections")) %>%
+    mutate(t = factor(t)) %>%
+    group_by(compartment, replicate) %>%
+    summarise(total = sum(y)) %>%
+    group_by(compartment) %>%
+    summarise(median = median(total))
+  
+  deaths <- output$median[output$compartment == "deaths"]
+  infections <- output$median[output$compartment == "infections"]
+  raw_IFRs[i, 3] <- 100 * deaths/infections
+  
+  # No Hospital (Oxygen) or ICU (MV) Capacity
+  x <- run_explicit_SEEIR_model(R0 = 3,
+                                country = countries[i],
+                                contact_matrix_set = mixing_matrix,
+                                population = std_population,
+                                hosp_bed_capacity = 0,
+                                ICU_bed_capacity = 0,
+                                replicates = 20,
+                                dt = 0.1,
+                                day_return = TRUE)
+  
+  output <- format_output(x, var_select = c("deaths", "infections")) %>%
+    mutate(t = factor(t)) %>%
+    group_by(compartment, replicate) %>%
+    summarise(total = sum(y)) %>%
+    group_by(compartment) %>%
+    summarise(median = median(total))
+  
+  deaths <- output$median[output$compartment == "deaths"]
+  infections <- output$median[output$compartment == "infections"]
+  raw_IFRs[i, 4] <- 100 * deaths/infections
+  
   print(i)
 }
 
-row.names(raw_IFRs) <- c("Baseline", "No MV", "No MV &\n Poorer\nOutcomes", "No MV &\nNo Oxygen")
-colnames(raw_IFRs) <- c("LIC", "LMIC", "UMIC", "HIC")
+row.names(raw_IFRs) <- c("LIC", "LMIC", "UMIC", "HIC")
 raw_IFRs <- round(raw_IFRs, 2)
-IFRs <- data.frame(LIC = raw_IFRs[, "LIC"], LMIC = raw_IFRs[, "LMIC"],
-                   UMIC = raw_IFRs[, "UMIC"], HIC = raw_IFRs[, "HIC"])
-e <- grid.table(t(IFRs))
+IFRs <- data.frame(raw_IFRs)
+colnames(raw_IFRs) <- c("Baseline", "No MV", "No MV &\n Poorer\nOutcomes", "No MV &\nNo Oxygen")
+e <- grid.table(IFRs)
 tt <- ttheme_default(colhead=list(fg_params = list(parse=TRUE)))
 e <- tableGrob(t(IFRs), rows=NULL, theme=tt)
 
