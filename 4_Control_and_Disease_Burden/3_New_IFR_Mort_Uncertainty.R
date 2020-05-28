@@ -4,6 +4,9 @@ library(squire); library(tidyverse)
 # Set Seed
 set.seed(10001092)
 
+# Set Working Directory
+setwd("4_Control_and_Disease_Burden")
+
 # Source Functions
 source("Functions/Healthcare_Demand_Functions.R")
 
