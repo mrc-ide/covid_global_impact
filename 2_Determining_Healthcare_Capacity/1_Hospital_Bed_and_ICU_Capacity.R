@@ -324,7 +324,7 @@ for (i in 1:4) {
                                 hosp_bed_capacity = 100000000,
                                 ICU_bed_capacity = 100000000,
                                 replicates = 20,
-                                dt = 0.05)
+                                dt = 0.1)
   deaths <- format_output(x, var_select = "D", reduce_age = FALSE) %>%
     group_by(age_group) %>%
     filter(t == max(t)) %>%
