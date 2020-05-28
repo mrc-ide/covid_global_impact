@@ -1,11 +1,12 @@
 # Load Required Libraries
-library(squire); library(tidyverse)
-
+library(squire); library(tidyr)
+library(vctrs)
+install.packages("tidyr")
 # Set Seed
 set.seed(10001092)
 
 # Set Working Directory
-setwd("4_Control_and_Disease_Burden")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Source Functions
 source("Functions/Healthcare_Demand_Functions.R")
@@ -101,6 +102,8 @@ for (i in 1:4) {
 # Gathering the Mitigated Capacity Exceedance Dataset
 mitigated_capacity_exceed <- data.frame(mitigated_capacity_exceed)
 colnames(mitigated_capacity_exceed) <- income_strata
+
+
 tidy_mit <- mitigated_capacity_exceed %>%
   gather(setting, multiple)
 tidy_mit$scenario <- "mitigated"
@@ -110,7 +113,7 @@ overall <- rbind(tidy_unmit, tidy_mit)
 overall$setting <- factor(overall$setting, levels = c("LIC", "LMIC", "UMIC", "HIC"))
 overall$scenario <- factor(overall$scenario, levels = c("unmitigated", "mitigated"))
 
-saveRDS(overall, file = "Outputs/HC_stretch_uncertainty.csv")
+saveRDS(overall, file = "Outputs/HC_stretch_uncertainty.rds")
 
 check_overall <- overall %>%
   group_by(setting, scenario) %>%
