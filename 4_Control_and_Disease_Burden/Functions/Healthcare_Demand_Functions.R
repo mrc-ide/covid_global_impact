@@ -40,3 +40,23 @@ generate_hosp_beds <- function(standard_population, income_strata, income_strata
   }
   return(hosp_beds)
 }
+
+# Generate IFRs Given a Model Output 
+get_IFR <- function(input) {
+  
+  deaths <- format_output(input, var_select = "deaths") %>%
+    mutate(t = factor(t)) %>%
+    group_by(t) %>%
+    summarise(median = median(y))
+  
+  infections <- format_output(input, var_select = "infections") %>%
+    mutate(t = factor(t)) %>%
+    group_by(t) %>%
+    summarise(median = median(y))
+  
+  total_deaths <- sum(deaths$median)
+  total_infections <- sum(infections$median)
+  
+  return(100 * (total_deaths/total_infections))
+  
+}
