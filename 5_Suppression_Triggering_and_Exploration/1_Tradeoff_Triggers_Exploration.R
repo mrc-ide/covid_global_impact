@@ -1,8 +1,10 @@
 # Loading Required Libraries
 library(tidyverse); library(zoo); library(squire)
 
-# Sourcing Functions for Running Model With Threshold Based Triggers
-setwd("5_Suppression_Triggering_and_Exploration/")
+# Set Working Directory
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# Loading Functions and Relevant Data
 source("Functions/Trigger_Running_Functions.R")
 income_strata_healthcare_capacity <- squire::income_strata_healthcare_capacity
 

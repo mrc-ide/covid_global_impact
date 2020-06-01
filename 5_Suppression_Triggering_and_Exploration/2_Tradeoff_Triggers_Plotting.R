@@ -1,8 +1,8 @@
 # Loading Rrequired Libraries
 library(tidyverse); library(zoo); library(patchwork); library(squire)
 
-# Sourcing Required Functions
-setwd("5_Suppression_Triggering_and_Exploration/")
+# Set Working Directory 
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source("Functions/Trigger_Running_Functions.R")
 
 # Set Seed
