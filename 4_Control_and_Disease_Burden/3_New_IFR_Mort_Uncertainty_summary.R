@@ -5,7 +5,7 @@ library(squire); library(tidyverse)
 set.seed(10001092)
 
 # Set Working Directory
-setwd("4_Control_and_Disease_Burden")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Source Functions
 source("Functions/Healthcare_Demand_Functions.R")

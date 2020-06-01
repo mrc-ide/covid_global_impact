@@ -53,8 +53,8 @@ averages_65s[i]=sum(hmr_surv$hv005[hmr_surv$over65==1]*hmr_surv$hv009[hmr_surv$o
 }
 
 ## GET WB GDP AND WPP DEMOGRAPHY FOR DHS COUNTRIES
-GDP<-read_xlsx(".Data/GDP_by_year.xlsx",sheet=2)
-demog<-read_xlsx(".Data/WPP2019_POP_F07_1_POPULATION_BY_AGE_BOTH_SEXES_DHS_countries.xlsx",sheet="DHS_countries")
+GDP<-read_xlsx("./Data/GDP_by_year.xlsx",sheet=2)
+demog<-read_xlsx("./Data/WPP2019_POP_F07_1_POPULATION_BY_AGE_BOTH_SEXES_DHS_countries.xlsx",sheet="DHS_countries")
 
 ### UK GDP FROM "GDP_by_year" worksheet from GDP_by_year.xlsx
 UKGDP<-45973.5735
