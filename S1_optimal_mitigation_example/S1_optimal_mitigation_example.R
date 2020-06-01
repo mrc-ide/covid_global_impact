@@ -68,7 +68,6 @@ overall$scenario <- factor(overall$scenario, levels = c("Unmitigated","Poorly mi
 
 tiff("FigureS1_Optimal_mitigation_example.tif",res=300,height=5,width=7,unit="in")
  ggplot(overall, aes(x = t/10, y = median/10, col = scenario)) + 
-  #geom_ribbon(aes(ymin = lower, ymax = upper, fill = scenario), alpha = 0.2, colour = NA) +
   geom_line(size = 2) +
   theme_bw() +
   scale_colour_manual(values = c("#D8DBE2", "#A9BCD0", "#58A4B0", "#373F51")) +
