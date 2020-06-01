@@ -26,7 +26,7 @@ data <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv",
 
 suppressed_countries <- data %>%
   left_join(ACAPS_inputs, by = c("countryterritoryCode" = "Code"))
-suppressed_countries
+
 #### find cases and deaths at date of suppression
 suppressed_countries <- data %>%
   left_join(ACAPS_inputs, by = c("countryterritoryCode" = "Code"))%>%
@@ -115,7 +115,7 @@ undetermined_countries<-data %>%
   filter(deaths>=10)%>%
   summarise(end_exp_growth=min(dateRep),deaths_at_end_exponential=min(deaths),cases_at_end_exponential=min(cases))
 
-all_no_suppress<-rbind(no_suppression_to_date_countries,undetermined_countries)
+all_no_suppress<-rbind(no_suppression_to_date_countries,ungroup(undetermined_countries))
 
 
 all_with_ECDC<-rbind(suppressed_countries,all_no_suppress)
