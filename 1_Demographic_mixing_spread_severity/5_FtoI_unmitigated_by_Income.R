@@ -7,7 +7,7 @@ library(RColorBrewer)
 
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-raw_df <- read.csv("Global_mitigation_strategies.csv")
+raw_df <- read.csv("Outputs/Global_mitigation_strategies.csv")
 
 world_bank_data_dictionary <- read.csv("Data/World_Bank_Country_Metadata.csv", stringsAsFactors = FALSE, header = TRUE, fileEncoding = 'UTF-8-BOM')
 world_bank_data_dictionary <- world_bank_data_dictionary %>%

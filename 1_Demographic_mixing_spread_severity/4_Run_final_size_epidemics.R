@@ -496,7 +496,7 @@ output_df_single_R<-data.frame(country,3.5,"Mitigation incl. enhanced social dis
 names(output_df_single_R)<-c("country","R0","Strategy","Reductions","total_pop","total_infected","total_deaths","total_hospital","total_critical",paste("pop",lower_ages,upper_ages,sep="_"),paste("infected",lower_ages,upper_ages,sep="_"),paste("deaths",lower_ages,upper_ages,sep="_"),paste("hospitalisations",lower_ages,upper_ages,sep="_"),paste("critical",lower_ages,upper_ages,sep="_"))
 output_df<-rbind(output_df,output_df_single_R)
 
-write.csv(output_df,"Global_mitigation_strategies_redo.csv",row.names=F)
+write.csv(output_df,"Outputs/Global_mitigation_strategies_redo.csv",row.names=F)
 
 
 
