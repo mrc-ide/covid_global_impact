@@ -225,7 +225,7 @@ pop_columns<-grep("pop",names(demog_WPP))
 
 
 ### get contact matrices
-contact_mat_list<-readRDS("contact_matrices.rds")
+contact_mat_list<-readRDS("Outputs/contact_matrices.rds")
 
 ### get severity inputs
 severity_inputs<-read.csv("./Data/severity_inputs.csv",fileEncoding="UTF-8-BOM")

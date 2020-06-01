@@ -10,7 +10,7 @@ library(gridExtra)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ### MCMC chains from Verity et al ####
-IFR_chains<-tbl_df(read.csv("IFR_age_chains.csv"))
+IFR_chains<-tbl_df(read.csv("Data/IFR_age_chains.csv"))
 
 
 ### JOINT POSTERIOR MEDIANS FROM VERITY ET AL  #####
@@ -214,10 +214,10 @@ uncertainty_df$age<-factor(uncertainty_df$age,levels=age_cats)
 verity_et_al_ages=c(seq(2.5,77.5,by=5),85)
 
 ## ESTIMATES OF PROBABILITY OF HOSPITALISATION ESTIMATED IN FRANCE BY SALJE ET AL https://science.sciencemag.org/content/early/2020/05/12/science.abc3517
-french<-tbl_df(read.csv("French PIH Estimates.csv",fileEncoding="UTF-8-BOM"))
+french<-tbl_df(read.csv("Data/French PIH Estimates.csv",fileEncoding="UTF-8-BOM"))
 
 ## ESTIMATES OF PROBABILITY OF HOSPITALISATION ESTIMATED IN CHINA BY BI ET AL https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30287-5/fulltext
-chinese<-tbl_df(read.table("lancet_prob_sev_prep.txt",header=T))
+chinese<-tbl_df(read.table("Data/lancet_prob_sev_prep.txt",header=T))
 
 other_data_ages=c(10,seq(25,85,by=10))
 
