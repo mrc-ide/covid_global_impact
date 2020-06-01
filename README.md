@@ -12,4 +12,8 @@ It is divided into 7 subfolders, each containing all the relevant data and R scr
 - Table_1_Government_Measures - contains the code used to generate *Table 1*.
 - S1_optimal_mitigation_example - contains the code used to generate *Supplementary Figure 1*.
 
-In addition to this code, running these analyses also requires downloading and installing an R package developed specifically for these analyses and that allows simulation of COVID-19 epidemics using an age-structured SEIR model (with explicit healthcare representation). The package is called squire and is available here: https://github.com/mrc-ide/squire 
+In addition to this code, running these analyses also requires downloading and installing an R package developed specifically for these analyses and that allows simulation of COVID-19 epidemics using an age-structured SEIR model (with explicit healthcare representation). The package is called squire and is available here: https://github.com/mrc-ide/squire. For the paper concerned, squire version 0.4.14 was used and can be installed with:
+
+```
+devtools::install_github("mrc-ide/squire@v0.4.14")
+```
