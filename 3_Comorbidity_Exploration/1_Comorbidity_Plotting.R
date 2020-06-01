@@ -3,7 +3,7 @@ library(tidyverse); library(lattice); library(viridisLite); library(RColorBrewer
 library(patchwork); library(cowplot); library(squire)
 
 # Set Working Data
-setwd("3_Comorbidity_Exploration/")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Loading In Data Used Across Multiple Analysis Strands
 final_size <- read.csv("Data/Global_unmitigated_and_mitigated_epidemics_2.4_to_3.5.csv")
