@@ -6,7 +6,7 @@ library(patchwork); library(cowplot); library(squire)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Loading In Data Used Across Multiple Analysis Strands
-final_size <- read.csv("Data/Global_unmitigated_and_mitigated_epidemics_2.4_to_3.5.csv")
+final_size <- read.csv("Data/Global_mitigation_strategies.csv")
 WPP <- read.csv("Data/WPP_demog_matrix.csv")
 world_bank_metadata <- read.csv("Data/World_Bank_Country_Metadata.csv", fileEncoding = 'UTF-8-BOM') %>%
   select(TableName, income_group, region)
@@ -133,6 +133,7 @@ WPP_como <- como_df %>%
 # Final Epidemic Size Linking
 final_size <- final_size %>%
   filter(R0 == 3) %>%
+  rename(Country = country) %>%
   select(Country, Strategy, grep("infected_", colnames(final_size))) %>%
   mutate(Country = as.character(Country))
 names_index <- grep("infected_", colnames(final_size))
