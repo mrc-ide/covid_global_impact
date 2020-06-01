@@ -7,14 +7,14 @@ conflict_prefer("filter", "dplyr")
 conflict_prefer("area", "patchwork")
 
 # Set Working Directory
-setwd("2_Determining_Healthcare_Capacity/")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Sourcing Functions
 source("Functions/Healthcare_Capacity_Functions.R")
 
 # Set Seed and Toggle Whether Fresh Run Required
 set.seed(1020191)
-fresh_run <- TRUE
+fresh_run <- FALSE
 
 # Loading In World Bank Covariates
 ## Maternal Mortality
