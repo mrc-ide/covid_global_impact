@@ -1,7 +1,6 @@
 # Load Required Libraries
-library(squire); library(tidyr)
-library(vctrs)
-install.packages("tidyr")
+library(squire); library(tidyr); library(vctrs)
+
 # Set Seed
 set.seed(10001092)
 
