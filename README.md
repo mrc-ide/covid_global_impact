@@ -17,3 +17,5 @@ In addition to this code, running these analyses also requires downloading and i
 ```
 devtools::install_github("mrc-ide/squire@v0.4.14")
 ```
+
+For all other packages used in this repository, the version can be found within 'installed_packages.rds'
