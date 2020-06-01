@@ -58,7 +58,8 @@ for (i in 1:length(countries)) {
                                          hospital_bed_capacity = 10000000,
                                          ICU_bed_capacity = 10000000,
                                          income_strata_healthcare_capacity = income_strata_healthcare_capacity,
-                                         poorer_outcomes = FALSE)
+                                         poorer_outcomes = FALSE,
+                                         prob_severe_death_no_treatment = rep(0.905, 17))
     a_max_ICU_req[i, j] <- median(get_max_ICU_req(x))
     a_time_in_lockdown[i, j] <- median(get_time_in_lockdown(x))
     a_deaths[i, j] <- median(get_total_deaths(x))
@@ -114,7 +115,8 @@ for (i in 1:length(countries)) {
                                          hospital_bed_capacity = NULL,
                                          ICU_bed_capacity = NULL,
                                          income_strata_healthcare_capacity = income_strata_healthcare_capacity,
-                                         poorer_outcomes = poorer_outcomes[i])
+                                         poorer_outcomes = poorer_outcomes[i],
+                                         prob_severe_death_no_treatment = rep(0.905, 17))
     b_max_ICU_req[i, j] <- median(get_max_ICU_req(x))
     b_time_in_lockdown[i, j] <- median(get_time_in_lockdown(x))
     b_deaths[i, j] <- median(get_total_deaths(x))

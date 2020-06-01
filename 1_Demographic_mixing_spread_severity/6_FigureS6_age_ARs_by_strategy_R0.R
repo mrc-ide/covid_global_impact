@@ -71,7 +71,7 @@ get_ARs<-function(country_name,contact_mat,demog,rvals,init,start_guess,reiterat
 
 library(tidyverse); library(readxl); library(socialmixr);library(dfoptim);library(viridis)
 
-contact_matrices<-readRDS("contact_matrices.rds")
+contact_matrices<-readRDS("Outputs/contact_matrices.rds")
 
 China_matrix<-contact_matrices[[12]]
 Netherlands_matrix<-contact_matrices[[7]]
