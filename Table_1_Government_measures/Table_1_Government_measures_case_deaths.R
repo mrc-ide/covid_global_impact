@@ -12,7 +12,7 @@ library(triangle)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ### import ACAPS inputs and format dates corrects
-ACAPS_inputs <- read_xlsx("ACAPS_suppression_measures_inputs.xlsx",sheet="Results")%>%
+ACAPS_inputs <- read_xlsx("Data/ACAPS_suppression_measures_inputs.xlsx",sheet="Results")%>%
   mutate(Date_suppression= excel_numeric_to_date(as.numeric(Date_suppression)),
   Date_lastACAPSifnosuppression= excel_numeric_to_date(as.numeric(Date_lastACAPSifnosuppression)),
   WPP_Population=as.numeric(WPP_Population))
@@ -177,5 +177,5 @@ summary_suppression_by_income$total_exp
 paste(round(summary_suppression_by_income$median_CPD,1)," (",round(summary_suppression_by_income$min_CPD,1)," - ",round(summary_suppression_by_income$max_CPD,1),")",sep="")
 
 
-write.csv(ACAPS_with_ECDC,"Outputs_for_ACAPS_appendix.csv",row.names = F)
+write.csv(ACAPS_with_ECDC,"Outputs/Outputs_for_ACAPS_appendix.csv",row.names = F)
 
